@@ -1,21 +1,23 @@
 # WDG — WireGuard Distributed Gateways
 
-> ⚠️ **Work in Progress** — Ce projet est en cours de développement (assisté IA). L'architecture est stabilisée, l'implémentation est en cours. Ne pas utiliser en production.
+> ⚠️ **Work in Progress** — This project is under active (AI-assisted) development. The architecture is stable; the implementation is ongoing. Not production-ready.
 
-WDG est une solution de VPN d'entreprise basée sur [WireGuard](https://www.wireguard.com/), conçue pour remplacer des infrastructures L2TP/IPsec et WebVPN existantes.
-Elle repose sur un plan de contrôle centralisé (Django) qui provisionne dynamiquement les configurations WireGuard à partir d'un SSO (CAS/OIDC), et distribue les accès réseau via plusieurs passerelles en fonction des droits de l'utilisateur.
+*Lire en [français](README.fr.md).*
+
+WDG is an enterprise VPN solution built on top of [WireGuard](https://www.wireguard.com/), designed to replace existing L2TP/IPsec and WebVPN deployments.
+It relies on a centralized Django control plane that dynamically provisions WireGuard configurations from an SSO (CAS/OIDC), and distributes network access across several gateways based on the user's permissions.
 
 ---
 
-## Contexte
+## Context
 
-L'objectif est de proposer une alternative aux tunnels (L2TP, VPN classique), orientée zero trust ,sans dépendre de solutions propriétaires, ou "opensource" dont l'avenir de licensing et de tarification n'est pas garanti.
+The goal is to offer an alternative to tunnel-based VPNs (L2TP, classic VPN), built along zero-trust lines, without depending on proprietary solutions — or "open-source" ones whose licensing and pricing future cannot be guaranteed.
 
-L'idée est de rester résolument simple, pour réduire drastiquement le coût de maitenance (notamment des clients), et de garder le contrôle.
+The design stays deliberately simple, in order to drastically reduce the maintenance cost (especially on the client side) and to keep control in-house.
 
-WDG répond combine WireGuard (protocole moderne, performant, audit-friendly) avec un plan de contrôle qui orchestre automatiquement clés, configs et révocations via le SSO.
+WDG combines WireGuard (a modern, performant, audit-friendly protocol) with a control plane that automatically orchestrates keys, configs and revocations through the SSO.
 
-Côté client, utilisation des clients standard wireguard.
+On the client side, standard WireGuard clients are used.
 
 ---
 
@@ -29,77 +31,78 @@ Côté client, utilisation des clients standard wireguard.
 │  ┌───────────┐  ┌───────────┐  ┌───────────────┐ │
 │  │   OIDC    │  │  Users /  │  │  WireGuard    │ │
 │  │  Client   │  │  Groups   │  │  Config Gen   │ │
-│  │  (CAS)    │  │  (DB)     │  │  (clés, IPs)  │ │
+│  │  (CAS)    │  │  (DB)     │  │  (keys, IPs)  │ │
 │  └───────────┘  └───────────┘  └───────────────┘ │
 │                       │                           │
-│               API REST (token-based)              │
+│               REST API (token-based)              │
 └───────────┬───────────────────────┬───────────────┘
             │                       │
      ┌──────▼──────┐        ┌───────▼──────┐
      │  Client     │        │  Gateway     │
      │  (script /  │        │  Agent       │
-     │   portail)  │        │  (Python)    │
+     │   portal)   │        │  (Python)    │
      │             │        │              │
      │  → .conf    │        │  wg syncconf │
      │  → wg-quick │        │  iptables    │
      └─────────────┘        └──────────────┘
 ```
 
-### Composants
+### Components
 
 **Control Plane (Django)**
-- Authentification via CAS (Apereo CAS v5+, exposé en OIDC)
-- Synchronisation des groupes depuis les claims OIDC
-- Génération et distribution des configurations WireGuard
-- API REST pour les clients et les agents de passerelle
-- Gestion du cycle de vie des pairs (création, révocation)
+- Authentication via CAS (Apereo CAS v5+, exposed as OIDC)
+- Group synchronization from OIDC claims
+- Generation and distribution of WireGuard configurations
+- REST API for clients and gateway agents
+- Peer lifecycle management (creation, revocation)
 
 **Gateway Agent (Python)**
-- Tourne en tant que service systemd sur chaque nœud de sortie
-- Poll le Control Plane et applique les changements via `wg syncconf`
-- Gère les règles iptables / NAT
+- Runs as a systemd service on each egress node
+- Polls the Control Plane and applies changes via `wg syncconf`
+- Manages iptables / NAT rules
 
 **Client**
-- Script Python multiplateforme (Linux, macOS, Windows)
-- Récupère la configuration depuis le Control Plane après authentification SSO
-- Génère un fichier `.conf` prêt pour `wg-quick`
-- Plusieurs configurations possibles selon les passerelles accessibles
+- Cross-platform Python script (Linux, macOS, Windows)
+- Retrieves the configuration from the Control Plane after SSO authentication
+- Generates a `.conf` file ready for `wg-quick`
+- Multiple configurations possible depending on the accessible gateways
+- Bilingual UI (English / French) — see [`wg_client/locales/README.md`](wg_client/locales/README.md)
 
 ---
 
-## Fonctionnalités
+## Features
 
-- [x] Architecture & spécifications
-- [ ] Control Plane — modèles Django (Users, Groups, Devices, Locations)
-- [ ] Intégration OIDC / CAS
-- [ ] API de provisioning (endpoint client)
-- [ ] API de synchronisation (endpoint gateway)
+- [x] Architecture & specifications
+- [ ] Control Plane — Django models (Users, Groups, Devices, Locations)
+- [ ] OIDC / CAS integration
+- [ ] Provisioning API (client endpoint)
+- [ ] Sync API (gateway endpoint)
 - [ ] Gateway Agent
-- [ ] Client Python (Linux)
-- [ ] Client Python (macOS / Windows)
-- [ ] Portail web (enrollment, téléchargement de conf)
-- [ ] Révocation automatique à la désactivation du compte
-- [ ] WebVPN via extension navigateur *(nice-to-have)*
+- [ ] Python client (Linux)
+- [ ] Python client (macOS / Windows)
+- [ ] Web portal (enrollment, config download)
+- [ ] Automatic revocation on account deactivation
+- [ ] WebVPN via browser extension *(nice-to-have)*
 
 ---
 
-## Stack technique
+## Tech stack
 
-| Composant | Technologie |
+| Component | Technology |
 |---|---|
 | Control Plane | Python / Django |
-| Auth SSO | Apereo CAS (via OIDC) — `mozilla-django-oidc` |
+| SSO auth | Apereo CAS (via OIDC) — `mozilla-django-oidc` |
 | VPN | WireGuard |
 | Gateway Agent | Python |
-| Base de données | PostgreSQL |
-| Déploiement | Docker Compose / systemd |
+| Database | PostgreSQL |
+| Deployment | Docker Compose / systemd |
 
 ---
 
-## Prérequis
+## Requirements
 
-- WireGuard installé sur les nœuds de passerelle
-- Apereo CAS v5+ configuré en OIDC Provider (scope `groups` requis)
+- WireGuard installed on gateway nodes
+- Apereo CAS v5+ configured as an OIDC Provider (`groups` scope required)
 - Python 3.11+
 - PostgreSQL 14+
 
@@ -107,18 +110,18 @@ Côté client, utilisation des clients standard wireguard.
 
 ## Installation
 
-> ⚠️ Pas encore disponible — en cours de développement.
+> ⚠️ Not yet available — under development.
 
 ```bash
 git clone https://github.com/<org>/wdg.git
 cd wdg
-# À compléter
+# TODO
 ```
 
 ---
 
-## Licence
+## License
 
-Ce projet est distribué sous licence [GNU General Public License v3.0](LICENSE).
+This project is distributed under the [GNU General Public License v3.0](LICENSE).
 
-Voir le fichier `LICENSE` pour les termes complets.
+See the `LICENSE` file for the full terms.

@@ -10,6 +10,8 @@ import webbrowser
 import keyring
 import requests
 
+from wg_client.i18n import _
+
 KEYRING_SERVICE = "wg-client"
 KEYRING_ACCESS_TOKEN = "access_token"
 KEYRING_REFRESH_TOKEN = "refresh_token"
@@ -30,11 +32,19 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
 
         if "code" in params:
             _CallbackHandler.result = {"code": params["code"][0]}
-            body = "<h2>Authentification réussie. Vous pouvez fermer cet onglet.</h2>".encode()
+            body = (
+                "<h2>"
+                + _("Authentication successful. You may close this tab.")
+                + "</h2>"
+            ).encode()
         else:
             error = params.get("error", ["unknown"])[0]
             _CallbackHandler.result = {"error": error}
-            body = f"<h2>Erreur : {error}. Vous pouvez fermer cet onglet.</h2>".encode()
+            body = (
+                "<h2>"
+                + _("Error: {error}. You may close this tab.").format(error=error)
+                + "</h2>"
+            ).encode()
 
         self.wfile.write(body)
 
@@ -92,7 +102,7 @@ def login(issuer: str, client_id: str) -> str:
     thread.daemon = True
     thread.start()
 
-    print(f"Ouverture du navigateur pour l'authentification...")
+    print(_("Opening browser for authentication..."))
     webbrowser.open(auth_url)
 
     deadline = time.time() + CALLBACK_TIMEOUT
@@ -102,9 +112,11 @@ def login(issuer: str, client_id: str) -> str:
     server.server_close()
 
     if _CallbackHandler.result is None:
-        raise TimeoutError("Timeout : aucune réponse du navigateur.")
+        raise TimeoutError(_("Timeout: no response from browser."))
     if "error" in _CallbackHandler.result:
-        raise RuntimeError(f"Erreur OIDC : {_CallbackHandler.result['error']}")
+        raise RuntimeError(
+            _("OIDC error: {error}").format(error=_CallbackHandler.result["error"])
+        )
 
     code = _CallbackHandler.result["code"]
 

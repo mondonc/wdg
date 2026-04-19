@@ -6,6 +6,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from wg_client.i18n import _
+
 
 def _platform() -> str:
     s = platform.system()
@@ -46,7 +48,7 @@ def _find_wg_quick() -> str:
         if shutil.which(candidate):
             return candidate
     raise FileNotFoundError(
-        "wg-quick introuvable. Installez wireguard-tools (Linux/macOS)."
+        _("wg-quick not found. Install wireguard-tools (Linux/macOS).")
     )
 
 
@@ -59,7 +61,7 @@ def _find_wireguard_exe() -> str:
         if Path(c).exists():
             return c
     raise FileNotFoundError(
-        "wireguard.exe introuvable. Installez le client WireGuard officiel."
+        _("wireguard.exe not found. Install the official WireGuard client.")
     )
 
 

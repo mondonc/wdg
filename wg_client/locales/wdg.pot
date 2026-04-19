@@ -1,0 +1,133 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR WDG contributors
+# This file is distributed under the same license as the wdg package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: wdg 0.1\n"
+"Report-Msgid-Bugs-To: https://github.com/mondonc/wdg/issues\n"
+"POT-Creation-Date: 2026-04-19 14:20+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: main.py:13
+#, python-brace-format
+msgid "'{key}' is missing. Run 'wg-client configure' first."
+msgstr ""
+
+#: main.py:18
+msgid "WireGuard client with SSO authentication."
+msgstr ""
+
+#: main.py:23
+msgid "Configure connection parameters."
+msgstr ""
+
+#: main.py:24
+msgid "Server URL (e.g. https://vpn.example.com)"
+msgstr ""
+
+#: main.py:25
+msgid "OIDC Issuer URL (e.g. https://cas.example.com/oidc)"
+msgstr ""
+
+#: main.py:26
+msgid "OIDC client_id"
+msgstr ""
+
+#: main.py:31
+msgid "Configuration saved."
+msgstr ""
+
+#: main.py:34
+msgid "Authenticate and bring up the WireGuard tunnel."
+msgstr ""
+
+#: main.py:44
+msgid "Generating new WireGuard keypair..."
+msgstr ""
+
+#: main.py:51
+msgid "Authenticating..."
+msgstr ""
+
+#: main.py:56
+msgid "Registering peer..."
+msgstr ""
+
+#: main.py:59
+msgid "Fetching configuration..."
+msgstr ""
+
+#: main.py:66
+msgid "Bringing up tunnel..."
+msgstr ""
+
+#: main.py:68
+msgid "✓ Tunnel up."
+msgstr ""
+
+#: main.py:71
+msgid "Bring down the WireGuard tunnel."
+msgstr ""
+
+#: main.py:74
+msgid "✓ Tunnel down."
+msgstr ""
+
+#: main.py:77
+msgid "Show tunnel status."
+msgstr ""
+
+#: main.py:80
+msgid "● Tunnel up."
+msgstr ""
+
+#: main.py:82
+msgid "○ Tunnel down."
+msgstr ""
+
+#: main.py:85
+msgid "Remove saved tokens (forces re-authentication)."
+msgstr ""
+
+#: main.py:88
+msgid "Tokens removed."
+msgstr ""
+
+#: auth.py:37
+msgid "Authentication successful. You may close this tab."
+msgstr ""
+
+#: auth.py:45
+#, python-brace-format
+msgid "Error: {error}. You may close this tab."
+msgstr ""
+
+#: auth.py:105
+msgid "Opening browser for authentication..."
+msgstr ""
+
+#: auth.py:115
+msgid "Timeout: no response from browser."
+msgstr ""
+
+#: auth.py:118
+#, python-brace-format
+msgid "OIDC error: {error}"
+msgstr ""
+
+#: tunnel.py:51
+msgid "wg-quick not found. Install wireguard-tools (Linux/macOS)."
+msgstr ""
+
+#: tunnel.py:64
+msgid "wireguard.exe not found. Install the official WireGuard client."
+msgstr ""

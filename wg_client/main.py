@@ -3,37 +3,36 @@ import sys
 import click
 
 from wg_client import api, auth, config, keygen, tunnel
+from wg_client.i18n import _
 
 
 def _require_setting(cfg: dict, key: str) -> str:
     val = cfg.get(key)
     if not val:
         raise click.ClickException(
-            f"'{key}' manquant. Lancez d'abord : wg-client configure"
+            _("'{key}' is missing. Run 'wg-client configure' first.").format(key=key)
         )
     return val
 
 
-@click.group()
+@click.group(help=_("WireGuard client with SSO authentication."))
 def cli():
-    """Client WireGuard avec authentification SSO."""
+    pass
 
 
-@cli.command()
-@click.option("--server", prompt="URL du serveur (ex: https://vpn.example.com)")
-@click.option("--issuer", prompt="OIDC Issuer URL (ex: https://cas.example.com/oidc)")
-@click.option("--client-id", prompt="OIDC client_id")
+@cli.command(help=_("Configure connection parameters."))
+@click.option("--server", prompt=_("Server URL (e.g. https://vpn.example.com)"))
+@click.option("--issuer", prompt=_("OIDC Issuer URL (e.g. https://cas.example.com/oidc)"))
+@click.option("--client-id", prompt=_("OIDC client_id"))
 def configure(server, issuer, client_id):
-    """Configure les paramètres de connexion."""
     cfg = config.load()
     cfg.update({"server": server, "issuer": issuer, "client_id": client_id})
     config.save(cfg)
-    click.echo("Configuration sauvegardée.")
+    click.echo(_("Configuration saved."))
 
 
-@cli.command()
+@cli.command(help=_("Authenticate and bring up the WireGuard tunnel."))
 def connect():
-    """Authentifie et active le tunnel WireGuard."""
     cfg = config.load()
     server = _require_setting(cfg, "server")
     issuer = _require_setting(cfg, "issuer")
@@ -42,54 +41,51 @@ def connect():
     # keypair
     private_key = config.get_private_key()
     if not private_key:
-        click.echo("Génération d'une nouvelle paire de clés WireGuard...")
+        click.echo(_("Generating new WireGuard keypair..."))
         private_key, public_key = keygen.generate_keypair()
         config.set_private_key(private_key)
     else:
         public_key = keygen.public_from_private(private_key)
 
     # auth
-    click.echo("Authentification...")
+    click.echo(_("Authenticating..."))
     token = auth.get_token(issuer, client_id)
 
     # register + fetch config
     client = api.WireGuardAPI(server, token)
-    click.echo("Enregistrement du peer...")
+    click.echo(_("Registering peer..."))
     client.register_peer(public_key)
 
-    click.echo("Récupération de la configuration...")
+    click.echo(_("Fetching configuration..."))
     conf = client.get_config()
 
-    # inject private key (le serveur ne la connaît pas)
+    # inject private key (the server never sees it)
     conf = conf.replace("__PRIVATE_KEY__", private_key)
 
     # up
-    click.echo("Activation du tunnel...")
+    click.echo(_("Bringing up tunnel..."))
     tunnel.connect(conf)
-    click.echo("✓ Tunnel actif.")
+    click.echo(_("✓ Tunnel up."))
 
 
-@cli.command()
+@cli.command(help=_("Bring down the WireGuard tunnel."))
 def disconnect():
-    """Désactive le tunnel WireGuard."""
     tunnel.disconnect()
-    click.echo("✓ Tunnel arrêté.")
+    click.echo(_("✓ Tunnel down."))
 
 
-@cli.command()
+@cli.command(help=_("Show tunnel status."))
 def status():
-    """Affiche l'état du tunnel."""
     if tunnel.status():
-        click.echo("● Tunnel actif.")
+        click.echo(_("● Tunnel up."))
     else:
-        click.echo("○ Tunnel inactif.")
+        click.echo(_("○ Tunnel down."))
 
 
-@cli.command()
+@cli.command(help=_("Remove saved tokens (forces re-authentication)."))
 def logout():
-    """Supprime les tokens sauvegardés (force une ré-authentification)."""
     auth.logout()
-    click.echo("Tokens supprimés.")
+    click.echo(_("Tokens removed."))
 
 
 if __name__ == "__main__":

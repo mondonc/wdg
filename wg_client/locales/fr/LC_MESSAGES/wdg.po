@@ -1,0 +1,132 @@
+# French translation for WDG client.
+# Copyright (C) 2026 WDG contributors
+# This file is distributed under the same license as the wdg package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: wdg 0.1\n"
+"Report-Msgid-Bugs-To: https://github.com/mondonc/wdg/issues\n"
+"POT-Creation-Date: 2026-04-19 14:20+0000\n"
+"PO-Revision-Date: 2026-04-19 14:20+0000\n"
+"Last-Translator: WDG contributors\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: main.py:13
+#, python-brace-format
+msgid "'{key}' is missing. Run 'wg-client configure' first."
+msgstr "'{key}' manquant. Lancez d'abord : wg-client configure"
+
+#: main.py:18
+msgid "WireGuard client with SSO authentication."
+msgstr "Client WireGuard avec authentification SSO."
+
+#: main.py:23
+msgid "Configure connection parameters."
+msgstr "Configure les paramètres de connexion."
+
+#: main.py:24
+msgid "Server URL (e.g. https://vpn.example.com)"
+msgstr "URL du serveur (ex: https://vpn.example.com)"
+
+#: main.py:25
+msgid "OIDC Issuer URL (e.g. https://cas.example.com/oidc)"
+msgstr "OIDC Issuer URL (ex: https://cas.example.com/oidc)"
+
+#: main.py:26
+msgid "OIDC client_id"
+msgstr "OIDC client_id"
+
+#: main.py:31
+msgid "Configuration saved."
+msgstr "Configuration sauvegardée."
+
+#: main.py:34
+msgid "Authenticate and bring up the WireGuard tunnel."
+msgstr "Authentifie et active le tunnel WireGuard."
+
+#: main.py:44
+msgid "Generating new WireGuard keypair..."
+msgstr "Génération d'une nouvelle paire de clés WireGuard..."
+
+#: main.py:51
+msgid "Authenticating..."
+msgstr "Authentification..."
+
+#: main.py:56
+msgid "Registering peer..."
+msgstr "Enregistrement du peer..."
+
+#: main.py:59
+msgid "Fetching configuration..."
+msgstr "Récupération de la configuration..."
+
+#: main.py:66
+msgid "Bringing up tunnel..."
+msgstr "Activation du tunnel..."
+
+#: main.py:68
+msgid "✓ Tunnel up."
+msgstr "✓ Tunnel actif."
+
+#: main.py:71
+msgid "Bring down the WireGuard tunnel."
+msgstr "Désactive le tunnel WireGuard."
+
+#: main.py:74
+msgid "✓ Tunnel down."
+msgstr "✓ Tunnel arrêté."
+
+#: main.py:77
+msgid "Show tunnel status."
+msgstr "Affiche l'état du tunnel."
+
+#: main.py:80
+msgid "● Tunnel up."
+msgstr "● Tunnel actif."
+
+#: main.py:82
+msgid "○ Tunnel down."
+msgstr "○ Tunnel inactif."
+
+#: main.py:85
+msgid "Remove saved tokens (forces re-authentication)."
+msgstr "Supprime les tokens sauvegardés (force une ré-authentification)."
+
+#: main.py:88
+msgid "Tokens removed."
+msgstr "Tokens supprimés."
+
+#: auth.py:37
+msgid "Authentication successful. You may close this tab."
+msgstr "Authentification réussie. Vous pouvez fermer cet onglet."
+
+#: auth.py:45
+#, python-brace-format
+msgid "Error: {error}. You may close this tab."
+msgstr "Erreur : {error}. Vous pouvez fermer cet onglet."
+
+#: auth.py:105
+msgid "Opening browser for authentication..."
+msgstr "Ouverture du navigateur pour l'authentification..."
+
+#: auth.py:115
+msgid "Timeout: no response from browser."
+msgstr "Timeout : aucune réponse du navigateur."
+
+#: auth.py:118
+#, python-brace-format
+msgid "OIDC error: {error}"
+msgstr "Erreur OIDC : {error}"
+
+#: tunnel.py:51
+msgid "wg-quick not found. Install wireguard-tools (Linux/macOS)."
+msgstr "wg-quick introuvable. Installez wireguard-tools (Linux/macOS)."
+
+#: tunnel.py:64
+msgid "wireguard.exe not found. Install the official WireGuard client."
+msgstr "wireguard.exe introuvable. Installez le client WireGuard officiel."
