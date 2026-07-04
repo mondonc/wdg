@@ -1,30 +1,85 @@
 """
 WDG authorization & topology model.
 
-The mapping that drives everything: a **Group** grants a set of entry
-**Gateways** and a set of exit **Networks**. A user's effective access is the
-union over the groups they belong to (see ``core.resolve``). Group membership is
-mirrored from CAS attributes at login, but can also be managed by hand in the
-admin (resilience when the IdP doesn't release attributes).
+The mapping that drives everything: a **Group** grants **Services** (the right
+to use their gateways, as entry point or relay hop) and exit **Networks** (the
+right to reach). A user's effective access is the union over their groups; the
+resolver (``core.resolve``) walks the gateway/relay graph to compute the
+multi-tunnel plan. Group membership and the user's home **Site** are mirrored
+from CAS attributes at login, but can also be managed by hand in the admin
+(resilience when the IdP doesn't release attributes).
+
+See docs/DESIGN-MULTITUNNEL.md for the full design.
 """
 
 from django.contrib.auth.models import User
 from django.db import models
 
 
-class Gateway(models.Model):
-    """A WireGuard egress node the client connects to (the tunnel entry point)."""
+class Site(models.Model):
+    """
+    A physical centre. Gateways belong to a site; a user's home site (mapped
+    from a CAS attribute via ``cas_values``, see ``WDG_CAS_SITE_ATTRIBUTE``)
+    makes its instances the preferred ones in their plan.
+    """
 
     name = models.CharField(max_length=64, unique=True)
+    description = models.CharField(max_length=255, blank=True)
+    # CAS attribute values that map a user onto this site.
+    cas_values = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Service(models.Model):
+    """
+    A pool of interchangeable gateways rendering one function (one instance
+    per site). Users connect to their site's instance and fail over to
+    another. Interchangeability is why behaviour flags live here, not on the
+    Gateway.
+    """
+
+    name = models.CharField(max_length=64, unique=True)
+    description = models.CharField(max_length=255, blank=True)
+    # Entry service: clients connect directly. Relay-only services (reached
+    # through other gateways, e.g. a datacenter hop) set this to False.
+    accepts_clients = models.BooleanField(default=True)
+    # This service's tunnel captures all traffic not matched elsewhere
+    # (0.0.0.0/0) — the traditional full-VPN internet egress.
+    default_route = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Gateway(models.Model):
+    """A WireGuard node: one site's instance of a service."""
+
+    name = models.CharField(max_length=64, unique=True)
+    service = models.ForeignKey(
+        Service, on_delete=models.PROTECT, related_name="instances", null=True, blank=True
+    )
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, related_name="gateways", null=True, blank=True
+    )
     # Public [Peer] Endpoint the client dials, e.g. "gw-a.vpn.example.com:51820".
     endpoint = models.CharField(max_length=255)
     public_key = models.CharField(max_length=64, blank=True)
-    # Tunnel subnet from which client addresses are allocated, e.g. "10.10.0.0/24".
-    tunnel_subnet = models.CharField(max_length=64)
+    # Tunnel subnet from which client addresses are allocated, e.g.
+    # "10.10.0.0/24". Unique across the fleet: relayed traffic is not NATed
+    # between gateways, so client addresses must be unambiguous in the overlay.
+    tunnel_subnet = models.CharField(max_length=64, unique=True)
     # Shared secret the gateway agent presents to the sync API.
     sync_token = models.CharField(max_length=128, blank=True)
-    # Exit networks this gateway can route to. A user's AllowedIPs on this
-    # gateway are their granted networks intersected with these.
+    # Exit networks this gateway has a direct leg into. Networks further away
+    # are reached through RelayLinks.
     networks = models.ManyToManyField("Network", related_name="gateways", blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -33,6 +88,48 @@ class Gateway(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class RelayLink(models.Model):
+    """
+    A directed inter-gateway WireGuard link: ``from_gateway`` forwards traffic
+    toward the networks (and further relays — chains are walked recursively)
+    behind ``to_gateway``. Using a relay hop is a privilege: the resolver only
+    walks into gateways whose service the user's groups grant.
+    """
+
+    from_gateway = models.ForeignKey(
+        Gateway, on_delete=models.CASCADE, related_name="relays_out"
+    )
+    to_gateway = models.ForeignKey(
+        Gateway, on_delete=models.CASCADE, related_name="relays_in"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["from_gateway", "to_gateway"], name="unique_relay_link"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(from_gateway=models.F("to_gateway")),
+                name="relay_link_not_self",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.from_gateway.name} → {self.to_gateway.name}"
+
+
+class UserProfile(models.Model):
+    """WDG per-user state: the home site (CAS-mirrored or admin-assigned)."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="wdg_profile")
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, related_name="users", null=True, blank=True
+    )
+
+    def __str__(self) -> str:
+        return f"{self.user.username}@{self.site.name if self.site else '?'}"
 
 
 class Network(models.Model):
@@ -51,7 +148,9 @@ class Network(models.Model):
 
 class Group(models.Model):
     """
-    An authorization group: grants entry gateways + exit networks to its members.
+    An authorization group: grants services (the right to use their gateways,
+    as entry or relay hop) + exit networks (the right to reach) to its members.
+    The resolver derives the concrete gateways.
 
     ``cas_names`` lists the CAS attribute values (e.g. ``memberOf`` entries) that
     map onto this group; several CAS names can converge on one WDG group.
@@ -61,7 +160,7 @@ class Group(models.Model):
     description = models.CharField(max_length=255, blank=True)
     cas_names = models.JSONField(default=list, blank=True)
 
-    gateways = models.ManyToManyField(Gateway, related_name="groups", blank=True)
+    services = models.ManyToManyField(Service, related_name="groups", blank=True)
     networks = models.ManyToManyField(Network, related_name="groups", blank=True)
     members = models.ManyToManyField(User, related_name="wdg_groups", blank=True)
 

@@ -71,3 +71,13 @@ def extract_groups(attributes: dict) -> list[str]:
             groups.extend(str(v) for v in value)
     # De-duplicate while preserving order.
     return list(dict.fromkeys(groups))
+
+
+def extract_site(attributes: dict) -> list[str]:
+    """Values of the CAS attribute carrying the user's home site (centre)."""
+    value = attributes.get(settings.WDG_CAS_SITE_ATTRIBUTE)
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return [str(v) for v in value]

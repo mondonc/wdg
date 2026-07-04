@@ -44,6 +44,8 @@ WDG_TOKEN_MAX_AGE = int(os.environ.get("WDG_TOKEN_MAX_AGE", str(12 * 3600)))
 WDG_AUTH_CODE_MAX_AGE = int(os.environ.get("WDG_AUTH_CODE_MAX_AGE", "60"))
 # CAS attribute names that carry group / affiliation membership.
 CAS_GROUP_ATTRIBUTES = _env_list("WDG_CAS_GROUP_ATTRIBUTES", "memberOf")
+# CAS attribute carrying the user's home site/centre (see core.models.Site).
+WDG_CAS_SITE_ATTRIBUTE = os.environ.get("WDG_CAS_SITE_ATTRIBUTE", "ou")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

@@ -1,17 +1,32 @@
 """
-Idempotent demo seed: gateways, exit networks, and groups wired to match the
-mock-CAS users (see deploy/cas-test/users.json). Safe to run repeatedly.
+Idempotent demo seed: sites, services, gateways, exit networks, and groups
+wired to match the mock-CAS users (see deploy/cas-test/users.json). Safe to
+run repeatedly.
 """
 
 from django.core.management.base import BaseCommand
 
-from core.models import Gateway, Group, Network
+from core.models import Gateway, Group, Network, Service, Site
+
+SITES = [
+    # name, cas_values (values of the WDG_CAS_SITE_ATTRIBUTE attribute)
+    ("site-a", ["centre-a"]),
+    ("site-b", ["centre-b"]),
+]
+
+# One demo service per gateway (single instance); richer multi-site/relay
+# topologies are exercised by the unit tests and the M11 e2e stack.
+SERVICES = [
+    # name, accepts_clients, default_route
+    ("gw-a", True, False),
+    ("gw-b", True, False),
+]
 
 GATEWAYS = [
-    # name, endpoint, tunnel_subnet, sync_token
+    # name, service, site, endpoint, tunnel_subnet, sync_token
     # public_key is left blank: the gateway agent self-reports it at sync time.
-    ("gw-a", "gw-a:51820", "10.10.0.0/24", "gw-a-sync-secret"),
-    ("gw-b", "gw-b:51820", "10.10.1.0/24", "gw-b-sync-secret"),
+    ("gw-a", "gw-a", "site-a", "gw-a:51820", "10.10.0.0/24", "gw-a-sync-secret"),
+    ("gw-b", "gw-b", "site-b", "gw-b:51820", "10.10.1.0/24", "gw-b-sync-secret"),
 ]
 
 NETWORKS = [
@@ -22,7 +37,7 @@ NETWORKS = [
     ("net-lab-b", "192.168.30.0/24", "Research lab B"),
 ]
 
-# name, cas_names, gateway names (entry), network names (exit)
+# name, cas_names, service names (entry), network names (exit)
 # cas_names shows configurable mapping: a WDG group can be reached from several
 # CAS values (a short name AND the full LDAP DN, or an affiliation string).
 GROUPS = [
@@ -39,7 +54,7 @@ GROUPS = [
     ("staff-network", ["staff"], ["gw-a"], ["net-common"]),
 ]
 
-# Which exit networks each gateway can actually route to.
+# Which exit networks each gateway has a direct leg into.
 GATEWAY_NETWORKS = {
     "gw-a": ["net-common", "net-lab-a"],
     "gw-b": ["net-common", "net-lab-b"],
@@ -47,27 +62,40 @@ GATEWAY_NETWORKS = {
 
 
 class Command(BaseCommand):
-    help = "Seed demo gateways, networks and groups (idempotent)."
+    help = "Seed demo sites, services, gateways, networks and groups (idempotent)."
 
     def handle(self, *args, **options):
-        for name, endpoint, subnet, sync_token in GATEWAYS:
+        for name, cas_values in SITES:
+            Site.objects.update_or_create(name=name, defaults={"cas_values": cas_values})
+
+        for name, accepts_clients, default_route in SERVICES:
+            Service.objects.update_or_create(
+                name=name,
+                defaults={"accepts_clients": accepts_clients, "default_route": default_route},
+            )
+
+        for name, svc_name, site_name, endpoint, subnet, sync_token in GATEWAYS:
             Gateway.objects.update_or_create(
                 name=name,
                 defaults={
+                    "service": Service.objects.get(name=svc_name),
+                    "site": Site.objects.get(name=site_name),
                     "endpoint": endpoint,
                     "tunnel_subnet": subnet,
                     "sync_token": sync_token,
                 },
             )
+
         for name, cidr, desc in NETWORKS:
             Network.objects.update_or_create(
                 name=name, defaults={"cidr": cidr, "description": desc}
             )
-        for name, cas_names, gw_names, net_names in GROUPS:
+
+        for name, cas_names, svc_names, net_names in GROUPS:
             group, _ = Group.objects.update_or_create(
                 name=name, defaults={"cas_names": cas_names}
             )
-            group.gateways.set(Gateway.objects.filter(name__in=gw_names))
+            group.services.set(Service.objects.filter(name__in=svc_names))
             group.networks.set(Network.objects.filter(name__in=net_names))
 
         for gw_name, net_names in GATEWAY_NETWORKS.items():

@@ -59,7 +59,7 @@ def cas_login(request):
 
 
 def _sync_user(cas_user: str, attributes: dict) -> User:
-    """Create/update the Django user and mirror CAS groups onto it."""
+    """Create/update the Django user and mirror CAS groups + site onto it."""
     user, _created = User.objects.get_or_create(username=cas_user)
 
     email = attributes.get("email") or attributes.get("mail")
@@ -70,6 +70,7 @@ def _sync_user(cas_user: str, attributes: dict) -> User:
         user.save(update_fields=["email"])
 
     sync.sync_membership(user, cas.extract_groups(attributes))
+    sync.sync_site(user, cas.extract_site(attributes))
     return user
 
 
@@ -127,12 +128,14 @@ def cas_exchange(request):
 
 @require_bearer
 def whoami(request):
-    """Return the identity + groups behind a WDG bearer token."""
+    """Return the identity, groups and home site behind a WDG bearer token."""
     user = request.wdg_user
+    profile = getattr(user, "wdg_profile", None)
     return JsonResponse(
         {
             "username": user.username,
             "email": user.email,
             "groups": sorted(g.name for g in user.wdg_groups.all()),
+            "site": profile.site.name if profile and profile.site else None,
         }
     )

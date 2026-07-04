@@ -61,6 +61,7 @@ All settings come from the environment (see `server/wdg_server/settings.py`):
 | `WDG_CAS_BASE_URL` | CAS base, e.g. `https://cas.example.org` |
 | `WDG_PUBLIC_BASE_URL` | public base of the control plane (the CAS `service` root) |
 | `WDG_CAS_GROUP_ATTRIBUTES` | CAS attributes carrying groups (default `memberOf`) |
+| `WDG_CAS_SITE_ATTRIBUTE` | CAS attribute carrying the user's home site/centre (default `ou`) |
 | `WDG_TOKEN_MAX_AGE` | WDG token lifetime, seconds |
 | `WDG_AUTH_CODE_MAX_AGE` | lifetime of the one-time login code, seconds (default 60) |
 | `POSTGRES_*` | database connection |

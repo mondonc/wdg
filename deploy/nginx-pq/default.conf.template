@@ -53,6 +53,10 @@ server {
         ${PQ_ENFORCE}
         proxy_pass http://control-plane:8000;
     }
+    location = /api/plan/ {
+        ${PQ_ENFORCE}
+        proxy_pass http://control-plane:8000;
+    }
 
     location / {
         proxy_pass http://control-plane:8000;

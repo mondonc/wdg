@@ -2,12 +2,14 @@
   "alice": {
     "email": "alice@example.org",
     "displayName": "Alice Martin",
-    "memberOf": ["vpn-users", "vpn-admins", "research-lab-a"]
+    "memberOf": ["vpn-users", "vpn-admins", "research-lab-a"],
+    "ou": ["centre-a"]
   },
   "bob": {
     "email": "bob@example.org",
     "displayName": "Bob Durand",
-    "memberOf": ["vpn-users", "research-lab-b"]
+    "memberOf": ["vpn-users", "research-lab-b"],
+    "ou": ["centre-b"]
   },
   "carol": {
     "email": "carol@example.org",

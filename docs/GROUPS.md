@@ -6,37 +6,55 @@ describes the model and how a user's WireGuard config is derived from it.
 
 ## The model (`server/core/models.py`)
 
-- **Gateway** — a WireGuard egress node clients dial (the tunnel *entry* point).
-  Has an `endpoint`, a `tunnel_subnet` (client addresses are allocated from it),
-  a `sync_token`, and the set of `networks` it can route to.
+- **Site** — a physical centre. Gateways belong to one; the user's home site
+  (from the CAS attribute `WDG_CAS_SITE_ATTRIBUTE`) makes its instances the
+  preferred ones in their plan.
+- **Service** — a pool of interchangeable gateways rendering one function,
+  one instance per site (failover order). `accepts_clients` distinguishes
+  entry services from relay-only ones; `default_route` marks the full-VPN
+  internet-egress tunnel. See docs/DESIGN-MULTITUNNEL.md.
+- **Gateway** — a WireGuard node: one site's instance of a service. Has an
+  `endpoint`, a fleet-unique `tunnel_subnet`, a `sync_token`, and the set of
+  `networks` it has a direct leg into.
+- **RelayLink** — a directed inter-gateway link: traffic entering
+  `from_gateway` may be forwarded toward what lives behind `to_gateway`
+  (chainable).
 - **Network** — a destination CIDR reachable through the tunnel (an *exit*
   resource), e.g. `192.168.20.0/24`.
-- **Group** — grants a set of entry `gateways` and exit `networks` to its
+- **Group** — grants `services` (the right to *use* their gateways, as entry
+  point or relay hop) and exit `networks` (the right to *reach*) to its
   `members`. `cas_names` lists the CAS values that map onto this group.
 - **Device** — a user's enrolled peer on a gateway (public key, allocated
   address, PSK).
 
 ## How access is resolved (`server/core/resolve.py`)
 
-A user's effective access is the **union over their groups**:
+A user's grants are the **union over their groups**: a set of services and a
+set of networks. `plan_for_user` then computes the multi-tunnel plan:
 
-- **entry gateways** = every active gateway granted by any of their groups;
-- **exit networks** = every network granted by any of their groups.
+1. one tunnel per granted entry service (`accepts_clients`), instances ordered
+   the user's site first (failover order);
+2. per tunnel, the reachable networks: the instance's direct legs **plus**
+   everything found by walking `RelayLink` edges — but only into gateways
+   whose service is also granted (a relay hop is a privilege);
+3. overlapping networks are assigned to exactly one tunnel (deterministic
+   partition) so client AllowedIPs never collide; the `default_route` tunnel
+   carries `0.0.0.0/0` and always comes last.
 
-Per gateway, the pushed `AllowedIPs` are scoped for coherence:
+The legacy single-tunnel path (`/api/config/`) still applies the direct-leg
+scoping:
 
 ```
 AllowedIPs(user, gateway) = networks_granted_to_user ∩ networks_routable_by_gateway
 ```
 
-So a network is only routed through a gateway that can actually reach it, and
-only for users whose groups grant it. The gateway additionally enforces this at
-the packet level: the agent builds a per-peer egress firewall (default-deny)
-allowing each client only to its permitted networks.
+Every gateway additionally enforces access at the packet level: the agent
+builds a per-peer egress firewall (default-deny) allowing each client only to
+its permitted networks.
 
 ### Example (from `seed_demo`)
 
-| Group | Entry gateways | Exit networks |
+| Group | Services (entry) | Exit networks |
 |---|---|---|
 | `vpn-users` | gw-a | net-common |
 | `vpn-admins` | gw-a, gw-b | net-common, net-lab-a, net-lab-b |
@@ -61,7 +79,13 @@ to a WDG group:
    LDAP DN or an affiliation string can map to a friendly group), else
 2. a group whose `name` equals the value, else
 3. a new group auto-created with that name (so unknown CAS groups still surface
-   and can be wired to gateways/networks later).
+   and can be wired to services/networks later).
+
+The user's **home site** follows the same idea with one difference: the CAS
+value (attribute `WDG_CAS_SITE_ATTRIBUTE`, e.g. `ou`) is matched against
+`Site.cas_values` then `Site.name`, but an unknown value is **ignored, never
+auto-created** (sites are infrastructure), and an empty release preserves an
+admin-assigned site.
 
 ### Resilience when attributes aren't released
 

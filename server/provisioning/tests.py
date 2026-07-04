@@ -49,6 +49,54 @@ class ProvisioningTests(TestCase):
         # The legitimate owner can still re-register their own key.
         service.register_devices(alice, "SHARED_KEY")
 
+    def test_plan_endpoint_partitions_and_carries_credentials(self):
+        from casauth import tokens
+
+        alice = self._user("alice", ["vpn-users", "vpn-admins", "research-lab-a"])
+        service.register_devices(alice, "PUBKEY_ALICE")
+
+        resp = self.client.get(
+            "/api/plan/", HTTP_AUTHORIZATION=f"Bearer {tokens.mint(alice)}"
+        )
+        self.assertEqual(resp.status_code, 200)
+        plan = resp.json()
+
+        by_service = {t["service"]: t for t in plan["tunnels"]}
+        self.assertEqual(set(by_service), {"gw-a", "gw-b"})
+        # gw-a (first in order) claims the shared network; gw-b only routes
+        # what is left — no AllowedIPs overlap between tunnels.
+        self.assertEqual(
+            sorted(by_service["gw-a"]["allowed_ips"]),
+            ["10.0.0.0/24", "192.168.20.0/24"],
+        )
+        self.assertEqual(by_service["gw-b"]["allowed_ips"], ["192.168.30.0/24"])
+        for tunnel in plan["tunnels"]:
+            for instance in tunnel["instances"]:
+                self.assertIsNotNone(instance["address"])
+                self.assertIsNotNone(instance["preshared_key"])
+                self.assertTrue(instance["endpoint"])
+
+    def test_plan_before_registration_has_null_credentials(self):
+        from casauth import tokens
+
+        bob = self._user("bob", ["vpn-users"])
+        resp = self.client.get(
+            "/api/plan/", HTTP_AUTHORIZATION=f"Bearer {tokens.mint(bob)}"
+        )
+        self.assertEqual(resp.status_code, 200)
+        instance = resp.json()["tunnels"][0]["instances"][0]
+        self.assertIsNone(instance["address"])
+        self.assertIsNone(instance["preshared_key"])
+
+    def test_plan_without_access_is_403(self):
+        from casauth import tokens
+
+        carol = self._user("carol", [])
+        resp = self.client.get(
+            "/api/plan/", HTTP_AUTHORIZATION=f"Bearer {tokens.mint(carol)}"
+        )
+        self.assertEqual(resp.status_code, 403)
+
     def test_config_is_scoped_to_the_gateway(self):
         from core import resolve
         from core.models import Gateway

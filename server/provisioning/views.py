@@ -65,6 +65,52 @@ def list_configs(request):
 
 @require_bearer
 @require_http_methods(["GET"])
+def get_plan(request):
+    """
+    The user's multi-tunnel plan (docs/DESIGN-MULTITUNNEL.md): ordered tunnels
+    (default-route last), each with disjoint AllowedIPs and its instances in
+    failover order (the user's site first). Per-instance credentials (address,
+    PSK) are null until the device is registered on that gateway.
+    """
+    user = request.wdg_user
+    tunnels = resolve.plan_for_user(user)
+    if not tunnels:
+        return JsonResponse({"detail": "no VPN access for this user"}, status=403)
+
+    gateway_ids = [g.pk for t in tunnels for g in t.instances]
+    devices = {
+        d.gateway_id: d
+        for d in Device.objects.filter(user=user, is_active=True, gateway_id__in=gateway_ids)
+    }
+    site = resolve.user_site(user)
+    return JsonResponse(
+        {
+            "site": site.name if site else None,
+            "tunnels": [
+                {
+                    "service": t.service.name,
+                    "default_route": t.service.default_route,
+                    "allowed_ips": t.allowed_ips,
+                    "instances": [
+                        {
+                            "gateway": g.name,
+                            "site": g.site.name if g.site else None,
+                            "endpoint": g.endpoint,
+                            "public_key": g.public_key,
+                            "address": devices[g.pk].address if g.pk in devices else None,
+                            "preshared_key": devices[g.pk].preshared_key if g.pk in devices else None,
+                        }
+                        for g in t.instances
+                    ],
+                }
+                for t in tunnels
+            ],
+        }
+    )
+
+
+@require_bearer
+@require_http_methods(["GET"])
 def get_config(request):
     """
     Return the WireGuard .conf for one gateway (``?gateway=NAME``; defaults to

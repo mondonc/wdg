@@ -1,7 +1,7 @@
 # Multi-tunnel architecture (design)
 
-> Status: **design validated, not yet implemented** (2026-07-04).
-> Supersedes the single-tunnel / primary-gateway model once M8+ land.
+> Status: **M8 (control plane) implemented**; M9–M12 pending (2026-07-04).
+> Supersedes the single-tunnel / primary-gateway model once M9+ land.
 
 ## Goals
 
