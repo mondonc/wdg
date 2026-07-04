@@ -1,0 +1,40 @@
+# $ssl_curve is the TLS 1.3 key-exchange group negotiated for the connection.
+# pq_ok is 1 only when the post-quantum hybrid group was used.
+map $ssl_curve $pq_ok {
+    default        0;
+    X25519MLKEM768 1;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/certs/server.crt;
+    ssl_certificate_key /etc/nginx/certs/server.key;
+    ssl_protocols TLSv1.3;
+    # Offer the PQ hybrid first, fall back to classic groups for old clients.
+    ssl_ecdh_curve X25519MLKEM768:X25519:prime256v1;
+
+    # Surface the negotiated group so clients can verify (and for debugging).
+    add_header X-PQ-Group $ssl_curve always;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-PQ-Group $ssl_curve;
+
+    # Sensitive endpoints: optionally fail-closed unless the connection is PQ.
+    location = /api/peers/register/ {
+        ${PQ_ENFORCE}
+        proxy_pass http://control-plane:8000;
+    }
+    location = /api/config/ {
+        ${PQ_ENFORCE}
+        proxy_pass http://control-plane:8000;
+    }
+
+    location / {
+        proxy_pass http://control-plane:8000;
+    }
+}

@@ -1,21 +1,27 @@
-import hashlib
+"""
+Authentication for the WDG client (Apereo CAS v3, via the control plane).
+
+The client never speaks the CAS protocol itself: it opens the browser at the
+control plane's ``/auth/cas/login`` endpoint (passing its loopback callback as
+the ``redirect``), lets the control plane handle the CAS ticket round-trip, and
+receives a WDG session token on the loopback redirect. That token is stored in
+the OS keyring and sent as a bearer token on subsequent API calls.
+"""
+
 import http.server
-import os
-import secrets
 import threading
 import time
 import urllib.parse
 import webbrowser
 
 import keyring
-import requests
 
 from wg_client.i18n import _
 
 KEYRING_SERVICE = "wg-client"
-KEYRING_ACCESS_TOKEN = "access_token"
-KEYRING_REFRESH_TOKEN = "refresh_token"
+KEYRING_TOKEN = "wdg_token"
 CALLBACK_PORT = 51820
+CALLBACK_PATH = "/callback"
 CALLBACK_TIMEOUT = 120
 
 
@@ -30,154 +36,70 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
 
-        if "code" in params:
-            _CallbackHandler.result = {"code": params["code"][0]}
-            body = (
-                "<h2>"
-                + _("Authentication successful. You may close this tab.")
-                + "</h2>"
-            ).encode()
+        if "wdg_token" in params:
+            _CallbackHandler.result = {"token": params["wdg_token"][0]}
+            message = _("Authentication successful. You may close this tab.")
         else:
             error = params.get("error", ["unknown"])[0]
             _CallbackHandler.result = {"error": error}
-            body = (
-                "<h2>"
-                + _("Error: {error}. You may close this tab.").format(error=error)
-                + "</h2>"
-            ).encode()
+            message = _("Error: {error}. You may close this tab.").format(error=error)
 
-        self.wfile.write(body)
+        self.wfile.write(("<h2>" + message + "</h2>").encode())
 
     def log_message(self, *args):
         pass
 
 
-def _pkce_pair() -> tuple[str, str]:
-    verifier = secrets.token_urlsafe(64)
-    digest = hashlib.sha256(verifier.encode()).digest()
-    challenge = (
-        __import__("base64")
-        .urlsafe_b64encode(digest)
-        .rstrip(b"=")
-        .decode()
+def login(server: str) -> str:
+    """
+    Interactive login: open the browser at the control plane, wait for the
+    loopback redirect, store and return the WDG token.
+    """
+    redirect_uri = f"http://localhost:{CALLBACK_PORT}{CALLBACK_PATH}"
+    login_url = (
+        server.rstrip("/")
+        + "/auth/cas/login?"
+        + urllib.parse.urlencode({"redirect": redirect_uri})
     )
-    return verifier, challenge
-
-
-def _discover(issuer: str) -> dict:
-    url = issuer.rstrip("/") + "/.well-known/openid-configuration"
-    resp = requests.get(url, timeout=10)
-    resp.raise_for_status()
-    return resp.json()
-
-
-def login(issuer: str, client_id: str) -> str:
-    """
-    Full PKCE authorization code flow.
-    Opens browser, waits for callback, exchanges code for token.
-    Returns access_token.
-    """
-    meta = _discover(issuer)
-    auth_endpoint = meta["authorization_endpoint"]
-    token_endpoint = meta["token_endpoint"]
-
-    verifier, challenge = _pkce_pair()
-    state = secrets.token_urlsafe(16)
-    redirect_uri = f"http://localhost:{CALLBACK_PORT}/callback"
-
-    params = {
-        "response_type": "code",
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "scope": "openid profile email",
-        "state": state,
-        "code_challenge": challenge,
-        "code_challenge_method": "S256",
-    }
-    auth_url = auth_endpoint + "?" + urllib.parse.urlencode(params)
 
     _CallbackHandler.result = None
-    server = http.server.HTTPServer(("localhost", CALLBACK_PORT), _CallbackHandler)
-    thread = threading.Thread(target=server.handle_request)
+    httpd = http.server.HTTPServer(("localhost", CALLBACK_PORT), _CallbackHandler)
+    thread = threading.Thread(target=httpd.handle_request)
     thread.daemon = True
     thread.start()
 
     print(_("Opening browser for authentication..."))
-    webbrowser.open(auth_url)
+    webbrowser.open(login_url)
 
     deadline = time.time() + CALLBACK_TIMEOUT
     while _CallbackHandler.result is None and time.time() < deadline:
         time.sleep(0.2)
 
-    server.server_close()
+    httpd.server_close()
 
     if _CallbackHandler.result is None:
         raise TimeoutError(_("Timeout: no response from browser."))
     if "error" in _CallbackHandler.result:
         raise RuntimeError(
-            _("OIDC error: {error}").format(error=_CallbackHandler.result["error"])
+            _("Authentication error: {error}").format(error=_CallbackHandler.result["error"])
         )
 
-    code = _CallbackHandler.result["code"]
-
-    resp = requests.post(
-        token_endpoint,
-        data={
-            "grant_type": "authorization_code",
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
-            "code": code,
-            "code_verifier": verifier,
-        },
-        timeout=15,
-    )
-    resp.raise_for_status()
-    tokens = resp.json()
-
-    keyring.set_password(KEYRING_SERVICE, KEYRING_ACCESS_TOKEN, tokens["access_token"])
-    if "refresh_token" in tokens:
-        keyring.set_password(KEYRING_SERVICE, KEYRING_REFRESH_TOKEN, tokens["refresh_token"])
-
-    return tokens["access_token"]
+    token = _CallbackHandler.result["token"]
+    keyring.set_password(KEYRING_SERVICE, KEYRING_TOKEN, token)
+    return token
 
 
-def refresh(issuer: str, client_id: str) -> str | None:
-    """Attempts a silent refresh. Returns new access_token or None."""
-    refresh_token = keyring.get_password(KEYRING_SERVICE, KEYRING_REFRESH_TOKEN)
-    if not refresh_token:
-        return None
-
-    meta = _discover(issuer)
-    token_endpoint = meta["token_endpoint"]
-
-    try:
-        resp = requests.post(
-            token_endpoint,
-            data={
-                "grant_type": "refresh_token",
-                "client_id": client_id,
-                "refresh_token": refresh_token,
-            },
-            timeout=15,
-        )
-        resp.raise_for_status()
-        tokens = resp.json()
-        keyring.set_password(KEYRING_SERVICE, KEYRING_ACCESS_TOKEN, tokens["access_token"])
-        if "refresh_token" in tokens:
-            keyring.set_password(KEYRING_SERVICE, KEYRING_REFRESH_TOKEN, tokens["refresh_token"])
-        return tokens["access_token"]
-    except Exception:
-        return None
-
-
-def get_token(issuer: str, client_id: str) -> str:
-    """Returns a valid access_token, refreshing or re-logging as needed."""
-    token = refresh(issuer, client_id)
-    if token:
-        return token
-    return login(issuer, client_id)
+def get_token(server: str, force: bool = False) -> str:
+    """Return a stored WDG token, logging in via the browser if needed."""
+    if not force:
+        token = keyring.get_password(KEYRING_SERVICE, KEYRING_TOKEN)
+        if token:
+            return token
+    return login(server)
 
 
 def logout():
-    keyring.delete_password(KEYRING_SERVICE, KEYRING_ACCESS_TOKEN)
-    keyring.delete_password(KEYRING_SERVICE, KEYRING_REFRESH_TOKEN)
+    try:
+        keyring.delete_password(KEYRING_SERVICE, KEYRING_TOKEN)
+    except keyring.errors.PasswordDeleteError:
+        pass

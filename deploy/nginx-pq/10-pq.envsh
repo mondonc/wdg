@@ -1,0 +1,8 @@
+# Turn the REQUIRE_PQ toggle into the nginx snippet injected on sensitive
+# locations. When enforcement is on, a non-post-quantum TLS connection is
+# refused with 421 before the request is proxied.
+if [ "${REQUIRE_PQ:-off}" = "on" ]; then
+    export PQ_ENFORCE='if ($pq_ok = 0) { return 421; }'
+else
+    export PQ_ENFORCE=''
+fi

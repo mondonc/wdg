@@ -57,6 +57,17 @@ LANG=fr_FR.UTF-8 wg-client --help
           locales/fr/LC_MESSAGES/wdg.po
    ```
 
+### Using pybabel (if the gettext CLI isn't installed)
+
+The same three steps with [Babel](https://babel.pocoo.org/) (a `babel.cfg` with
+`[python: **.py]` is included):
+
+```bash
+pybabel extract -F babel.cfg -k _ -o locales/wdg.pot .   # extract
+pybabel update  -i locales/wdg.pot -d locales -D wdg -l fr   # merge into fr
+pybabel compile -d locales -D wdg -l fr --statistics         # compile .mo
+```
+
 ## Adding a new language
 
 ```bash

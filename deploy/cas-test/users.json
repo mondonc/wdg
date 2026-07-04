@@ -1,0 +1,23 @@
+{
+  "alice": {
+    "email": "alice@example.org",
+    "displayName": "Alice Martin",
+    "memberOf": ["vpn-users", "vpn-admins", "research-lab-a"]
+  },
+  "bob": {
+    "email": "bob@example.org",
+    "displayName": "Bob Durand",
+    "memberOf": ["vpn-users", "research-lab-b"]
+  },
+  "carol": {
+    "email": "carol@example.org",
+    "displayName": "Carol Petit",
+    "memberOf": []
+  },
+  "dave": {
+    "email": "dave@example.org",
+    "displayName": "Dave Robert",
+    "memberOf": ["cn=vpn-admins,ou=groups,dc=example,dc=org"],
+    "eduPersonAffiliation": ["staff", "member"]
+  }
+}
