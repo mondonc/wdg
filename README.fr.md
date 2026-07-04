@@ -1,5 +1,9 @@
 # WDG — WireGuard Distributed Gateways
 
+<p align="center">
+  <img src="logo/wdg-logo-preview.png" alt="WDG — les clients atteignent les réseaux de sortie via une pile de passerelles WireGuard pilotée par un plan de contrôle central" width="640">
+</p>
+
 > ⚠️ **Work in Progress** — Projet en développement actif (assisté IA). L'architecture est stable et une preuve de concept de bout en bout tourne et est testée sous Docker ; **pas prêt pour la production**.
 
 *Read in [English](README.md).*

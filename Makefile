@@ -12,7 +12,7 @@ IMAGES   := control-plane gateway nginx-pq
 COMPOSE  := docker compose -f deploy/docker-compose.yml
 DOC_DIR  := docs/generated
 
-.PHONY: help build push up seed test e2e doc clean
+.PHONY: help build push up seed test e2e doc logo clean
 
 help: ## List available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -52,6 +52,13 @@ doc: ## Generate the network plan from the database (PDF/SVG diagram + Markdown 
 		dot -Tsvg topology.dot -o topology.svg && \
 		dot -Tpng -Gdpi=110 topology.dot -o topology.png"
 	@echo "→ $(DOC_DIR)/topology.{pdf,svg,png,md}"
+
+logo: ## Rebuild logo assets from logo/wdg-logo.tex (needs lualatex + pdftocairo)
+	cd logo && lualatex -interaction=nonstopmode wdg-logo.tex >/dev/null
+	cd logo && pdftocairo -svg wdg-logo.pdf wdg-logo.svg
+	cd logo && pdftocairo -png -r 220 -singlefile wdg-logo.pdf wdg-logo-preview
+	cp logo/wdg-logo.svg logo/wdg-mark.svg server/core/static/core/
+	rm -f logo/wdg-logo.aux logo/wdg-logo.log logo/wdg-logo.pdf
 
 clean: ## Remove generated documentation
 	rm -rf $(DOC_DIR)

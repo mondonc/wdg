@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- WDG compact mark: the gateway stack + padlock from the full logo
+     (logo/wdg-logo.tex), for favicons, avatars and small placements. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g stroke="#88171A" stroke-width="2.4" fill="#FFFFFF">
+    <rect x="13.5" y="34" width="38" height="15" rx="7"/>
+    <rect x="12"   y="25" width="38" height="15" rx="7"/>
+    <rect x="10.5" y="16" width="38" height="15" rx="7"/>
+    <rect x="9"    y="7"  width="38" height="15" rx="7"/>
+  </g>
+  <circle cx="45" cy="46" r="12.5" fill="#FFFFFF" stroke="#88171A" stroke-width="2"/>
+  <g>
+    <path d="M 40.6 44.4 v -3.1 a 4.4 4.4 0 0 1 8.8 0 v 3.1" fill="none"
+          stroke="#88171A" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="38.2" y="43.6" width="13.6" height="10.4" rx="2.2" fill="#88171A"/>
+    <circle cx="45" cy="47.6" r="1.5" fill="#FFFFFF"/>
+    <rect x="44.2" y="47.6" width="1.6" height="3.4" fill="#FFFFFF"/>
+  </g>
+</svg>

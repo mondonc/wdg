@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | WDG{% endblock %}
+
+{% block extrahead %}
+<link rel="icon" type="image/svg+xml" href="{% static 'core/wdg-mark.svg' %}">
+{% endblock %}
+
+{% block extrastyle %}
+<style>
+  #site-name a { display: flex; align-items: center; gap: 10px; }
+  #site-name img { height: 30px; width: auto; }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <img src="{% static 'core/wdg-mark.svg' %}" alt="">
+    {{ site_header }}
+  </a>
+</div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
