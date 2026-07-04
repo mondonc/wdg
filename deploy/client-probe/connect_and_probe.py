@@ -1,10 +1,13 @@
 """
 Client probe: full client flow against the live stack + a real WireGuard tunnel,
-used to validate M3 (reachability) and M4 (group-scoped egress, revocation).
+used to validate M3 (reachability), M4 (group-scoped egress, revocation) and
+M9 (relayed networks: the tunnel conf comes from the multi-tunnel plan API, so
+AllowedIPs include what is reachable through relay chains).
 
 Env:
   USERNAME   CAS user to log in as (default alice)
-  GATEWAY    optional gateway name (?gateway=) — defaults to primary
+  GATEWAY    optional service/instance name to select the tunnel — defaults to
+             the plan's first tunnel
   REACH      comma-separated URLs that MUST be reachable through the tunnel
   DENY       comma-separated URLs that MUST NOT be reachable
   MODE       "probe" (default: test then exit) or "hold" (test then stay up)
@@ -70,6 +73,34 @@ def reachable(url: str, tries: int = 1) -> bool:
     return False
 
 
+def build_conf(private_key: str, tunnel: dict) -> str:
+    instance = tunnel["instances"][0]
+    return (
+        "[Interface]\n"
+        f"PrivateKey = {private_key}\n"
+        f"Address = {instance['address']}/32\n"
+        "\n"
+        "[Peer]\n"
+        f"PublicKey = {instance['public_key']}\n"
+        f"PresharedKey = {instance['preshared_key']}\n"
+        f"Endpoint = {instance['endpoint']}\n"
+        f"AllowedIPs = {', '.join(tunnel['allowed_ips'])}\n"
+        "PersistentKeepalive = 25\n"
+    )
+
+
+def pick_tunnel(plan: dict) -> dict:
+    tunnels = plan["tunnels"]
+    if not GATEWAY:
+        return tunnels[0]
+    for tunnel in tunnels:
+        if tunnel["service"] == GATEWAY or any(
+            i["gateway"] == GATEWAY for i in tunnel["instances"]
+        ):
+            return tunnel
+    fail(f"no tunnel matching {GATEWAY} in plan: {[t['service'] for t in tunnels]}")
+
+
 def main():
     token = login_as(USERNAME)
     session = requests.Session()
@@ -81,14 +112,15 @@ def main():
         fail(f"register returned {reg.status_code}: {reg.text}")
     print(f"  · {USERNAME} registered: {reg.json()}")
 
-    cfg_url = f"{CONTROL_PLANE}/api/config/" + (f"?gateway={GATEWAY}" if GATEWAY else "")
-    conf = session.get(cfg_url, timeout=15).text.replace("__PRIVATE_KEY__", private_key)
+    plan = session.get(f"{CONTROL_PLANE}/api/plan/", timeout=15).json()
+    tunnel = pick_tunnel(plan)
+    conf = build_conf(private_key, tunnel)
     os.makedirs("/etc/wireguard", exist_ok=True)
     with open(f"/etc/wireguard/{IFACE}.conf", "w") as fh:
         fh.write(conf)
 
     subprocess.run(["wg-quick", "up", IFACE], check=True)
-    print(f"  · tunnel up via {GATEWAY or 'primary'}")
+    print(f"  · tunnel up via {tunnel['service']} (AllowedIPs: {', '.join(tunnel['allowed_ips'])})")
 
     for url in REACH:
         if reachable(url, tries=15):

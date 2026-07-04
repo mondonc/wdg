@@ -157,10 +157,12 @@ def _gateway_address(gateway: Gateway) -> str:
 def gateway_sync(request):
     """
     Gateway agent endpoint: the agent presents its sync token, self-reports its
-    current WireGuard public key, and receives the peers it should serve —
-    each with its tunnel address (for routing) and permitted exit networks (for
-    egress filtering). Devices of deactivated users/accounts are excluded, which
-    is how revocation propagates.
+    current WireGuard public key, and receives everything it must program —
+    its client peers, its inter-gateway relay peers (forward + return paths),
+    the per-client egress permissions it enforces at this hop (local and
+    relayed clients alike), and the client subnets to MASQUERADE on its legs.
+    Devices of deactivated users/accounts are excluded, which is how
+    revocation propagates.
     """
     gateway = _gateway_from_token(request)
     if gateway is None:
@@ -176,11 +178,8 @@ def gateway_sync(request):
         gateway.public_key = public_key
         gateway.save(update_fields=["public_key"])
 
-    devices = list(
-        Device.objects.filter(gateway=gateway, is_active=True, user__is_active=True)
-    )
-    networks_by_user = resolve.networks_via_gateway_bulk(
-        {d.user_id for d in devices}, gateway
+    devices = Device.objects.filter(
+        gateway=gateway, is_active=True, user__is_active=True
     )
     peers = [
         {
@@ -188,7 +187,6 @@ def gateway_sync(request):
             "preshared_key": d.preshared_key,
             "address": d.address,
             "allowed_ips": [f"{d.address}/32"],
-            "networks": networks_by_user[d.user_id],
         }
         for d in devices
     ]
@@ -199,5 +197,8 @@ def gateway_sync(request):
             "tunnel_subnet": gateway.tunnel_subnet,
             "listen_port": GATEWAY_LISTEN_PORT,
             "peers": peers,
+            "relay_peers": resolve.relay_peers_for_gateway(gateway),
+            "forward_rules": resolve.forward_rules_for_gateway(gateway),
+            "masq_subnets": resolve.masq_subnets_for_gateway(gateway),
         }
     )

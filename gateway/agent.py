@@ -106,38 +106,51 @@ def _iptables_ensure(rule: list[str], table: str | None = None):
         run([*base, "-A", *rule])
 
 
-def ensure_forwarding(subnet: str):
-    """One-time forwarding/NAT scaffolding. Per-peer egress lives in FWD_CHAIN."""
+def ensure_forwarding():
+    """One-time forwarding scaffolding. Per-client egress lives in FWD_CHAIN."""
     # Best-effort: compose also sets this sysctl.
     subprocess.run(["sysctl", "-w", "net.ipv4.ip_forward=1"], capture_output=True)
 
-    # A dedicated chain holds the per-peer egress rules (rebuilt each sync).
+    # A dedicated chain holds the per-client egress rules (rebuilt each sync).
     subprocess.run(["iptables", "-N", FWD_CHAIN], capture_output=True)
     _iptables_ensure(["FORWARD", "-i", IFACE, "-j", FWD_CHAIN])
-    # Return traffic to connected clients.
+    # Return traffic to connected clients (leg -> tunnel).
     _iptables_ensure(
         ["FORWARD", "-o", IFACE, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"]
     )
-    _iptables_ensure(
-        ["POSTROUTING", "-s", subnet, "!", "-o", IFACE, "-j", "MASQUERADE"], table="nat"
-    )
+
+
+def ensure_masquerade(subnets: list[str]):
+    """
+    MASQUERADE client subnets leaving through the legs (never the tunnel
+    itself: inter-gateway relay traffic keeps the client's address). Covers
+    this gateway's own subnet plus the upstream ones the sync reports.
+    """
+    for subnet in subnets:
+        _iptables_ensure(
+            ["POSTROUTING", "-s", subnet, "!", "-o", IFACE, "-j", "MASQUERADE"], table="nat"
+        )
 
 
 _egress_rules: list[tuple[str, str]] | None = None
 
 
-def rebuild_egress_firewall(peers: list[dict]):
+def rebuild_egress_firewall(forward_rules: list[dict]):
     """
-    Rebuild FWD_CHAIN so each peer may reach only its permitted exit networks;
-    anything else from the tunnel is dropped (default-deny egress). Skipped
-    when nothing changed: the flush/append cycle briefly leaves the chain
-    empty, and its behaviour then depends on the host's FORWARD policy.
+    Rebuild FWD_CHAIN from the control plane's (src client, dst network)
+    permissions — local and relayed clients alike; anything else entering
+    from the tunnel is dropped (default-deny egress). The leading conntrack
+    rule lets transit replies (tunnel -> tunnel on a middle hop) through.
+    Skipped when nothing changed: the flush/append cycle briefly leaves the
+    chain empty, and its behaviour then depends on the host's FORWARD policy.
     """
     global _egress_rules
-    rules = [(p["address"], net) for p in peers for net in p.get("networks", [])]
+    rules = [(r["src"], r["dst"]) for r in forward_rules]
     if rules == _egress_rules:
         return
     run(["iptables", "-F", FWD_CHAIN])
+    run(["iptables", "-A", FWD_CHAIN, "-m", "conntrack", "--ctstate",
+         "RELATED,ESTABLISHED", "-j", "ACCEPT"])
     for address, net in rules:
         run(["iptables", "-A", FWD_CHAIN, "-s", address, "-d", net, "-j", "ACCEPT"])
     run(["iptables", "-A", FWD_CHAIN, "-j", "DROP"])
@@ -167,24 +180,64 @@ def apply_peer(peer: dict):
             os.unlink(psk_path)
 
 
+def apply_relay_peer(peer: dict):
+    """Program an inter-gateway peer: same wg0 interface, no extra port."""
+    run([
+        "wg", "set", IFACE, "peer", peer["public_key"],
+        "endpoint", peer["endpoint"],
+        "persistent-keepalive", "25",
+        "allowed-ips", ",".join(peer["allowed_ips"]),
+    ])
+
+
 def remove_peer(public_key: str):
     run(["wg", "set", IFACE, "peer", public_key, "remove"])
 
 
-def reconcile(peers: list[dict]):
+_relay_routes: set[str] = set()
+
+
+def sync_relay_routes(relay_peers: list[dict]):
+    """
+    Kernel routes matching the relay peers' AllowedIPs: forward networks and
+    upstream client subnets (return path) are reached through the tunnel.
+    """
+    global _relay_routes
+    desired = {cidr for p in relay_peers for cidr in p["allowed_ips"]}
+    for cidr in desired - _relay_routes:
+        run(["ip", "route", "replace", cidr, "dev", IFACE])
+    for cidr in _relay_routes - desired:
+        subprocess.run(["ip", "route", "del", cidr, "dev", IFACE], capture_output=True)
+    _relay_routes = desired
+
+
+def reconcile(state: dict):
     desired = set()
-    for peer in peers:
+    for peer in state["peers"]:
         try:
             apply_peer(peer)
             desired.add(peer["public_key"])
         except subprocess.CalledProcessError as exc:
             # A single malformed peer must not take the whole gateway down.
             log(f"skipping invalid peer {peer['public_key'][:16]}…: {exc}")
+
+    # Relay peers whose agent has not yet self-reported a key are retried on
+    # the next poll (both sides converge within a couple of cycles).
+    relay_peers = [p for p in state.get("relay_peers", []) if p.get("public_key")]
+    for peer in relay_peers:
+        try:
+            apply_relay_peer(peer)
+            desired.add(peer["public_key"])
+        except subprocess.CalledProcessError as exc:
+            log(f"skipping relay peer {peer['name']}: {exc}")
+
     for stale in current_peers() - desired:
         log(f"removing stale peer {stale[:16]}…")
         remove_peer(stale)
-    # Egress rules follow the peers that were successfully programmed.
-    rebuild_egress_firewall([p for p in peers if p["public_key"] in desired])
+
+    sync_relay_routes(relay_peers)
+    rebuild_egress_firewall(state.get("forward_rules", []))
+    ensure_masquerade(state.get("masq_subnets", [state["tunnel_subnet"]]))
 
 
 # --- Main loop -------------------------------------------------------------
@@ -218,10 +271,10 @@ def main():
             ensure_interface(
                 private_key, public_key, state["address"], prefixlen, state["listen_port"]
             )
-            ensure_forwarding(state["tunnel_subnet"])
+            ensure_forwarding()
             configured = True
 
-        reconcile(state["peers"])
+        reconcile(state)
         time.sleep(POLL_INTERVAL)
 
 

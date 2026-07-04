@@ -63,11 +63,11 @@ class ProvisioningTests(TestCase):
 
         by_service = {t["service"]: t for t in plan["tunnels"]}
         self.assertEqual(set(by_service), {"gw-a", "gw-b"})
-        # gw-a (first in order) claims the shared network; gw-b only routes
-        # what is left — no AllowedIPs overlap between tunnels.
+        # gw-a (first in order) claims the shared network and carries the
+        # relayed net-dc; gw-b only routes what is left — no overlap.
         self.assertEqual(
             sorted(by_service["gw-a"]["allowed_ips"]),
-            ["10.0.0.0/24", "192.168.20.0/24"],
+            ["10.0.0.0/24", "192.168.20.0/24", "192.168.40.0/24"],
         )
         self.assertEqual(by_service["gw-b"]["allowed_ips"], ["192.168.30.0/24"])
         for tunnel in plan["tunnels"]:

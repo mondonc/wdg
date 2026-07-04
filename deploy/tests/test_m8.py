@@ -63,10 +63,11 @@ def main() -> int:
     by_service = {t["service"]: t for t in plan["tunnels"]}
     assert set(by_service) == {"gw-a", "gw-b"}, plan
 
-    # Disjoint partition: the shared net-common is claimed by gw-a only.
+    # Disjoint partition: the shared net-common is claimed by gw-a only, and
+    # the relayed net-dc rides the gw-a tunnel (gw-a → gw-dc chain).
     a_ips = set(by_service["gw-a"]["allowed_ips"])
     b_ips = set(by_service["gw-b"]["allowed_ips"])
-    assert a_ips == {"10.0.0.0/24", "192.168.20.0/24"}, a_ips
+    assert a_ips == {"10.0.0.0/24", "192.168.20.0/24", "192.168.40.0/24"}, a_ips
     assert b_ips == {"192.168.30.0/24"}, b_ips
     assert not (a_ips & b_ips)
     print("  ✓ alice: plan tunnels gw-a/gw-b with disjoint AllowedIPs")

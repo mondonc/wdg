@@ -15,11 +15,12 @@ Two generations coexist here (see docs/DESIGN-MULTITUNNEL.md):
 """
 
 import ipaddress
+from collections import defaultdict
 from dataclasses import dataclass, field
 
 from django.contrib.auth.models import User
 
-from .models import Device, Gateway, Network, Service, Site
+from .models import Device, Gateway, Network, RelayLink, Service, Site
 
 
 def granted_services(user: User) -> list[Service]:
@@ -65,25 +66,6 @@ def networks_via_gateway(user: User, gateway: Gateway) -> list["Network"]:
     """
     granted = {n.pk for n in granted_networks(user)}
     return [n for n in gateway.networks.all() if n.pk in granted]
-
-
-def networks_via_gateway_bulk(user_ids: set[int], gateway: Gateway) -> dict[int, list[str]]:
-    """
-    Batch variant of :func:`networks_via_gateway` for the sync API: the CIDRs
-    each user may reach through this gateway, computed in two queries instead
-    of several per user.
-    """
-    granted: dict[int, set[int]] = {uid: set() for uid in user_ids}
-    pairs = Network.objects.filter(groups__members__in=user_ids).values_list(
-        "pk", "groups__members"
-    )
-    for network_pk, user_id in pairs:
-        granted[user_id].add(network_pk)
-    gateway_networks = list(gateway.networks.all())
-    return {
-        uid: [n.cidr for n in gateway_networks if n.pk in granted[uid]]
-        for uid in user_ids
-    }
 
 
 def allowed_ips_for_user(user: User, gateway: Gateway | None = None) -> list[str]:
@@ -190,6 +172,175 @@ def plan_for_user(user: User) -> list[PlanTunnel]:
         tunnels.append(PlanTunnel(service=service, allowed_ips=allowed, instances=instances))
 
     return tunnels
+
+
+# --- Sync-side topology (what each gateway agent must program) ---------------
+
+
+def _active_topology():
+    """
+    The relay graph over active gateways, preloaded in four queries:
+    ``(gateways, out_edges, in_edges, gw_networks)`` with pk-keyed dicts.
+    """
+    gateways = {
+        g.pk: g
+        for g in Gateway.objects.filter(is_active=True).select_related("service")
+    }
+    out_edges: dict[int, list[int]] = defaultdict(list)
+    in_edges: dict[int, list[int]] = defaultdict(list)
+    links = RelayLink.objects.filter(
+        from_gateway__in=gateways, to_gateway__in=gateways
+    ).values_list("from_gateway", "to_gateway")
+    for from_pk, to_pk in links:
+        out_edges[from_pk].append(to_pk)
+        in_edges[to_pk].append(from_pk)
+    gw_networks: dict[int, list[tuple[int, str]]] = defaultdict(list)
+    pairs = Network.objects.filter(gateways__pk__in=gateways).values_list(
+        "gateways__pk", "pk", "cidr"
+    )
+    for gw_pk, net_pk, cidr in pairs:
+        gw_networks[gw_pk].append((net_pk, cidr))
+    return gateways, out_edges, in_edges, gw_networks
+
+
+def _bfs(start_pk: int, edges: dict[int, list[int]]) -> list[int]:
+    visited = [start_pk]
+    queue = [start_pk]
+    while queue:
+        current = queue.pop(0)
+        for nxt in edges.get(current, []):
+            if nxt not in visited:
+                visited.append(nxt)
+                queue.append(nxt)
+    return visited
+
+
+def relay_peers_for_gateway(gateway: Gateway) -> list[dict]:
+    """
+    The inter-gateway WireGuard peers this gateway must program — topology
+    only, per-user authorization stays in :func:`forward_rules_for_gateway`.
+
+    Toward a downstream relay, AllowedIPs are the networks living behind it
+    (its direct legs and everything further down the chain — the forward
+    path). Toward an upstream gateway, AllowedIPs are the client tunnel
+    subnets behind it (the return path for un-NATed relayed traffic).
+    """
+    gateways, out_edges, in_edges, gw_networks = _active_topology()
+    peers: dict[int, dict] = {}
+
+    def peer(pk: int) -> dict:
+        g = gateways[pk]
+        return peers.setdefault(
+            pk,
+            {
+                "name": g.name,
+                "public_key": g.public_key,
+                "endpoint": g.endpoint,
+                "allowed_ips": [],
+            },
+        )
+
+    for down_pk in out_edges.get(gateway.pk, []):
+        entry = peer(down_pk)
+        for pk in _bfs(down_pk, out_edges):
+            for _net_pk, cidr in gw_networks.get(pk, []):
+                if cidr not in entry["allowed_ips"]:
+                    entry["allowed_ips"].append(cidr)
+
+    for up_pk in in_edges.get(gateway.pk, []):
+        entry = peer(up_pk)
+        for pk in _bfs(up_pk, in_edges):
+            subnet = gateways[pk].tunnel_subnet
+            if subnet not in entry["allowed_ips"]:
+                entry["allowed_ips"].append(subnet)
+
+    return sorted(peers.values(), key=lambda p: p["name"])
+
+
+def masq_subnets_for_gateway(gateway: Gateway) -> list[str]:
+    """
+    Client tunnel subnets whose traffic may exit through this gateway's legs
+    (its own + every upstream gateway's): each needs a MASQUERADE rule on the
+    last leg so target networks only ever see the local gateway.
+    """
+    gateways, _out, in_edges, _nets = _active_topology()
+    subnets = []
+    for pk in _bfs(gateway.pk, in_edges):
+        subnet = gateways[pk].tunnel_subnet
+        if subnet not in subnets:
+            subnets.append(subnet)
+    return subnets
+
+
+def forward_rules_for_gateway(gateway: Gateway) -> list[dict]:
+    """
+    Per-client egress permissions this hop must enforce, as
+    ``{"src": <client address>, "dst": <network cidr>}`` pairs — local
+    clients and relayed ones alike (their addresses belong to other
+    gateways' tunnel subnets; no inter-gateway NAT).
+
+    A pair is emitted when this gateway sits on the client's path (BFS tree,
+    restricted to the user's granted services) from their entry gateway to
+    the gateway carrying the target network.
+    """
+    gateways, out_edges, _in, gw_networks = _active_topology()
+
+    devices = list(
+        Device.objects.filter(
+            is_active=True, user__is_active=True, gateway__pk__in=gateways
+        )
+    )
+    user_ids = {d.user_id for d in devices}
+    user_services: dict[int, set[int]] = defaultdict(set)
+    for svc_pk, uid in Service.objects.filter(groups__members__in=user_ids).values_list(
+        "pk", "groups__members"
+    ):
+        user_services[uid].add(svc_pk)
+    user_networks: dict[int, set[int]] = defaultdict(set)
+    for net_pk, uid in Network.objects.filter(groups__members__in=user_ids).values_list(
+        "pk", "groups__members"
+    ):
+        user_networks[uid].add(net_pk)
+
+    rules: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for device in devices:
+        granted_svc = user_services.get(device.user_id, set())
+        granted_net = user_networks.get(device.user_id, set())
+        entry = gateways.get(device.gateway_id)
+        if (
+            entry is None
+            or entry.service is None
+            or entry.service_id not in granted_svc
+            or not entry.service.accepts_clients
+        ):
+            continue
+
+        # BFS tree from the entry gateway, walking only granted services.
+        parents: dict[int, int | None] = {entry.pk: None}
+        queue = [entry.pk]
+        while queue:
+            current = queue.pop(0)
+            for nxt in out_edges.get(current, []):
+                if nxt in parents or gateways[nxt].service_id not in granted_svc:
+                    continue
+                parents[nxt] = current
+                queue.append(nxt)
+
+        for visited_pk in parents:
+            for net_pk, cidr in gw_networks.get(visited_pk, []):
+                if net_pk not in granted_net:
+                    continue
+                node: int | None = visited_pk
+                while node is not None and node != gateway.pk:
+                    node = parents[node]
+                if node != gateway.pk:
+                    continue  # this hop is not on the path to that network
+                key = (device.address, cidr)
+                if key not in seen:
+                    seen.add(key)
+                    rules.append({"src": device.address, "dst": cidr})
+    return rules
 
 
 # --- Address allocation ------------------------------------------------------

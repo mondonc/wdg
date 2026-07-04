@@ -125,6 +125,36 @@ services:
       exitnet: {}
       exitnet-b: {}
 
+  # Relay-only gateway (service dc-access): no direct clients, reached through
+  # gw-a over an inter-gateway WireGuard link. Its only leg is the DC network.
+  gw-dc:
+    build: ../gateway
+    profiles: ["tunnel"]
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    environment:
+      WDG_CONTROL_PLANE: http://control-plane:8000
+      WDG_GATEWAY_TOKEN: gw-dc-sync-secret
+    volumes:
+      - gwdc-state:/var/lib/wdg
+    networks:
+      default: {}
+      exitnet-dc: {}
+
+  # A service on the DC network: reachable only through the gw-a → gw-dc chain.
+  exit-target-dc:
+    image: python:3.13-slim
+    profiles: ["tunnel"]
+    command: ["python", "-m", "http.server", "8000"]
+    networks:
+      exitnet-dc:
+        ipv4_address: 192.168.40.10
+
   # On-demand: runs the full client flow and probes the exit target through
   # a real WireGuard tunnel to gw-a. `docker compose run --rm client-probe`.
   client-probe:
@@ -152,7 +182,12 @@ networks:
     ipam:
       config:
         - subnet: 192.168.20.0/24
+  exitnet-dc:
+    ipam:
+      config:
+        - subnet: 192.168.40.0/24
 
 volumes:
   pgdata:
   gwa-state:
+  gwdc-state:

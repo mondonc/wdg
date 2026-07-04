@@ -1,7 +1,7 @@
 # Multi-tunnel architecture (design)
 
-> Status: **M8 (control plane) implemented**; M9–M12 pending (2026-07-04).
-> Supersedes the single-tunnel / primary-gateway model once M9+ land.
+> Status: **M8 (control plane) and M9 (gateway agent) implemented**; M10–M12
+> pending (2026-07-04). The dev stack exercises a real gw-a → gw-dc chain.
 
 ## Goals
 

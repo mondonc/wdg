@@ -61,7 +61,8 @@ An end-to-end proof of concept is implemented and **tested in Docker** (Linux da
 - [x] Post-quantum TLS transport (`X25519MLKEM768`) + `require_pq` client switch
 - [x] CAS attribute → group mapping (+ resilience to un-released attributes)
 - [x] Multi-tunnel control plane — sites, services (gateway pools), relay graph, `/api/plan/` ([design](docs/DESIGN-MULTITUNNEL.md))
-- [ ] Multi-tunnel gateway agent (relay links, per-hop enforcement) & client
+- [x] Relay gateways — inter-gateway WireGuard links, per-hop egress enforcement, chained exit (tested: real gw-a → gw-dc chain)
+- [ ] Multi-tunnel client (simultaneous tunnels, connect-time failover)
 - [x] Python client (Linux) — tested end-to-end
 - [ ] Python client (macOS / Windows) — code present, **not yet validated on those OSes**
 - [ ] Web enrollment portal *(nice-to-have)*

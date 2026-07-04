@@ -76,10 +76,11 @@ class AccessResolutionTests(SeededTestCase):
         alice = User.objects.create(username="alice")
         sync.sync_membership(alice, ["vpn-users", "vpn-admins", "research-lab-a"])
         access = resolve.access_for_user(alice)
+        # gw-dc is relay-only (accepts_clients=False): never a client gateway.
         self.assertEqual(sorted(g.name for g in access["gateways"]), ["gw-a", "gw-b"])
         self.assertEqual(
             sorted(resolve.allowed_ips_for_user(alice)),
-            ["10.0.0.0/24", "192.168.20.0/24", "192.168.30.0/24"],
+            ["10.0.0.0/24", "192.168.20.0/24", "192.168.30.0/24", "192.168.40.0/24"],
         )
 
     def test_plain_user_is_limited_to_common_network(self):
@@ -156,11 +157,11 @@ class SiteMappingTests(SeededTestCase):
         self.assertEqual(sync.sync_site(user, []).name, "site-a")
 
 
-class PlanTests(TestCase):
+class RelayTopologyTestCase(TestCase):
     """
-    Multi-tunnel resolver over the design's reference topology: two sites,
-    an internet-egress (default-route) service, an SI entry service, and a
-    relay chain si → dc → core.
+    The design's reference topology: two sites, an internet-egress
+    (default-route) service, an SI entry service, and a relay chain
+    si → dc → core.
     """
 
     @classmethod
@@ -217,6 +218,10 @@ class PlanTests(TestCase):
         if site:
             UserProfile.objects.create(user=user, site=site)
         return user
+
+
+class PlanTests(RelayTopologyTestCase):
+    """Multi-tunnel plan resolver."""
 
     def test_single_service_plan(self):
         user = self._user("u1", [self.g_si], self.site_a)
@@ -300,6 +305,84 @@ class PlanTests(TestCase):
         user = self._user("u11", [self.g_si, self.g_dc], self.site_a)
         names = [g.name for g in resolve.gateways_for_user(user)]
         self.assertEqual(names, ["si-a", "si-b"])  # dc-a accepts no clients
+
+
+class SyncTopologyTests(RelayTopologyTestCase):
+    """
+    What the sync API computes for each hop of the si → dc → core chain:
+    inter-gateway peers (forward + return AllowedIPs), per-client forward
+    rules, and the subnets to MASQUERADE on the legs.
+    """
+
+    def test_entry_gateway_relay_peer_covers_the_whole_forward_path(self):
+        peers = resolve.relay_peers_for_gateway(self.si_a)
+        self.assertEqual([p["name"] for p in peers], ["dc-a"])
+        # Networks behind dc-a, including the chained core hop.
+        self.assertEqual(
+            sorted(peers[0]["allowed_ips"]), ["172.16.20.0/24", "172.16.30.0/24"]
+        )
+
+    def test_relay_gateway_peers_both_directions(self):
+        peers = {p["name"]: p for p in resolve.relay_peers_for_gateway(self.dc_a)}
+        self.assertEqual(set(peers), {"si-a", "si-b", "core-1"})
+        # Return path: the client subnets behind each upstream entry gateway.
+        self.assertEqual(peers["si-a"]["allowed_ips"], ["10.21.0.0/24"])
+        self.assertEqual(peers["si-b"]["allowed_ips"], ["10.21.1.0/24"])
+        # Forward path to the next hop.
+        self.assertEqual(peers["core-1"]["allowed_ips"], ["172.16.30.0/24"])
+
+    def test_chain_tail_sees_all_upstream_subnets(self):
+        peers = {p["name"]: p for p in resolve.relay_peers_for_gateway(self.core_1)}
+        self.assertEqual(set(peers), {"dc-a"})
+        self.assertEqual(
+            sorted(peers["dc-a"]["allowed_ips"]),
+            ["10.21.0.0/24", "10.21.1.0/24", "10.22.0.0/24"],
+        )
+
+    def test_masquerade_covers_upstream_client_subnets(self):
+        self.assertEqual(
+            sorted(resolve.masq_subnets_for_gateway(self.dc_a)),
+            ["10.21.0.0/24", "10.21.1.0/24", "10.22.0.0/24"],
+        )
+        self.assertEqual(resolve.masq_subnets_for_gateway(self.si_a), ["10.21.0.0/24"])
+
+    def test_forward_rules_follow_the_path_and_the_grants(self):
+        user = self._user("w1", [self.g_si, self.g_dc], self.site_a)
+        device = Device.objects.create(
+            user=user, gateway=self.si_a, public_key="K1",
+            address="10.21.0.2", preshared_key="P1",
+        )
+        # Entry hop: direct net + relayed net.
+        self.assertEqual(
+            resolve.forward_rules_for_gateway(self.si_a),
+            [
+                {"src": "10.21.0.2", "dst": "172.16.10.0/24"},
+                {"src": "10.21.0.2", "dst": "172.16.20.0/24"},
+            ],
+        )
+        # Relay hop: only the relayed net (net-core is not granted).
+        self.assertEqual(
+            resolve.forward_rules_for_gateway(self.dc_a),
+            [{"src": "10.21.0.2", "dst": "172.16.20.0/24"}],
+        )
+        self.assertEqual(resolve.forward_rules_for_gateway(self.core_1), [])
+        # The other site's entry instance is not on this client's path.
+        self.assertEqual(resolve.forward_rules_for_gateway(self.si_b), [])
+        # Revocation: deactivating the device removes every rule.
+        device.is_active = False
+        device.save(update_fields=["is_active"])
+        self.assertEqual(resolve.forward_rules_for_gateway(self.dc_a), [])
+
+    def test_middle_hop_carries_chained_traffic(self):
+        user = self._user("w2", [self.g_si, self.g_dc, self.g_core], self.site_a)
+        Device.objects.create(
+            user=user, gateway=self.si_a, public_key="K2",
+            address="10.21.0.3", preshared_key="P2",
+        )
+        rules = resolve.forward_rules_for_gateway(self.dc_a)
+        self.assertIn({"src": "10.21.0.3", "dst": "172.16.30.0/24"}, rules)
+        rules = resolve.forward_rules_for_gateway(self.core_1)
+        self.assertEqual(rules, [{"src": "10.21.0.3", "dst": "172.16.30.0/24"}])
 
 
 class AddressAllocationTests(SeededTestCase):

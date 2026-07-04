@@ -73,9 +73,21 @@ Each gateway runs the agent (`gateway/agent.py`). It:
 1. loads its WireGuard keypair from `WDG_STATE_DIR` (generated once, then
    persistent across restarts) and self-reports the public key at sync time;
 2. brings up kernel WireGuard (`ip link add … type wireguard`), assigns the
-   gateway's tunnel address, enables forwarding and MASQUERADE;
-3. every few seconds POSTs `/api/gateways/sync/` with its sync token, receives
-   its authorized peers, and reconciles `wg` peers + the per-peer egress chain.
+   gateway's tunnel address and enables forwarding;
+3. every few seconds POSTs `/api/gateways/sync/` with its sync token and
+   reconciles everything the control plane computed for this hop:
+   - its **client peers** (`wg` peers, one per device);
+   - its **relay peers** — inter-gateway WireGuard links on the same `wg0`
+     (no extra port), with AllowedIPs covering the networks behind a
+     downstream relay (forward path) or the client tunnel subnets behind an
+     upstream gateway (return path — relayed traffic is not NATed between
+     gateways), plus the matching kernel routes;
+   - the **per-client egress chain** (default-deny): `(client address →
+     network)` permissions for local *and* relayed clients, since client
+     addresses survive across hops;
+   - the **MASQUERADE rules** for every client subnet that may exit through
+     its legs (its own and upstream ones) — target networks only ever see
+     the local gateway's address.
 
 Agent environment:
 
