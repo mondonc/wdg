@@ -389,6 +389,31 @@ class SyncTopologyTests(RelayTopologyTestCase):
         self.assertEqual(rules, [{"src": "10.21.0.3", "dst": "172.16.30.0/24"}])
 
 
+class TopologyExportTests(SeededTestCase):
+    def _export(self, fmt):
+        import io
+
+        out = io.StringIO()
+        call_command("topology_export", f"--format={fmt}", stdout=out)
+        return out.getvalue()
+
+    def test_dot_contains_sites_gateways_relays_and_legend(self):
+        dot = self._export("dot")
+        self.assertIn("digraph wdg", dot)
+        self.assertIn("site-a", dot)
+        self.assertIn("gw-a:51820", dot)
+        self.assertIn('label="relay"', dot)
+        self.assertIn("relay-only", dot)  # legend flag for dc-access
+
+    def test_markdown_contains_the_addressing_tables(self):
+        md = self._export("markdown")
+        for heading in ["## Sites", "## Services", "## Gateways & addressing",
+                        "## Relay links", "## Networks", "## Group grants"]:
+            self.assertIn(heading, md)
+        self.assertIn("10.10.0.0/24", md)
+        self.assertIn("| gw-a | gw-dc |", md)
+
+
 class GatewayValidationTests(SeededTestCase):
     def _gateway(self, subnet):
         return Gateway(name="new-gw", endpoint="new-gw:51820", tunnel_subnet=subnet)

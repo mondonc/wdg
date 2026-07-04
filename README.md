@@ -107,6 +107,12 @@ docker compose start gw-a
 bash tests/m5_pq_check.sh
 ```
 
+Convenience targets from the repo root: `make up`, `make seed`, `make test`,
+`make e2e`. `make push REGISTRY=registry.gitlab.example.org/infra/wdg`
+publishes the images (SHA + latest) for servers to pull, and `make doc`
+generates the network/addressing plan (PDF/SVG diagram + Markdown tables)
+from the live database — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for how it all fits together and how to move toward production.
 
 ---

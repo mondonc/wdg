@@ -13,3 +13,6 @@ db.sqlite3
 # OS / editors
 .DS_Store
 *.swp
+
+# Generated documentation (make doc)
+/docs/generated/

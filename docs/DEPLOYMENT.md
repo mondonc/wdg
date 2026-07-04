@@ -125,6 +125,40 @@ from `X-Forwarded-For` so the rate limit keys on the real client, not the LB.
 Leave it empty when clients connect directly — trusting `X-Forwarded-For`
 from arbitrary peers would let anyone dodge the limit by forging the header.
 
+## Images & registry (`make build` / `make push`)
+
+The repo-root Makefile builds and publishes three images — `control-plane`,
+`gateway` (the same image runs entry gateways **and** relays; only
+`WDG_GATEWAY_TOKEN` differs) and `nginx-pq` — tagged with the git short SHA
+plus `latest`:
+
+```bash
+docker login registry.gitlab.example.org
+make push REGISTRY=registry.gitlab.example.org/infra/wdg
+# or pin a tag explicitly: make push REGISTRY=... TAG=v0.3.0
+```
+
+In GitLab CI, use `$CI_REGISTRY_IMAGE` as `REGISTRY` and log in with
+`$CI_JOB_TOKEN`. Servers managed by Puppet can then track `:latest` (or a
+pinned SHA/tag for controlled rollouts) and restart the containers on image
+change — the gateway keeps its identity across updates as long as
+`WDG_STATE_DIR` is on a volume.
+
+## Network plan documentation (`make doc`)
+
+`make doc` reads the topology **from the control-plane database** (the stack
+must be up) and writes to `docs/generated/`:
+
+- `topology.pdf` / `.svg` / `.png` — a Graphviz diagram: sites as clusters,
+  gateways coloured by service (relay-only dashed), relay links, direct
+  network legs, and a service legend;
+- `topology.md` — the addressing plan as tables: sites, services,
+  gateways/subnets/endpoints, relay links, networks, group grants.
+
+Under the hood: `manage.py topology_export --format dot|markdown`, rendered
+by a tiny Graphviz image (`deploy/doc/`). Run it after any topology change in
+the admin to keep an up-to-date, shareable view.
+
 ## Toward production (not done yet)
 
 The dev stack cuts corners a real deployment must fix:
