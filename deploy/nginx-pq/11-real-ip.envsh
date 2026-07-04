@@ -1,0 +1,18 @@
+# When nginx-pq itself sits behind a load balancer, $remote_addr is the LB —
+# the rate limit would then throttle the LB, i.e. everyone at once. Set
+# REAL_IP_FROM to the trusted LB address(es)/CIDR(s), comma-separated, and the
+# client IP is recovered from X-Forwarded-For instead.
+#
+# Opt-in on purpose: trusting X-Forwarded-For from arbitrary peers would let
+# any client dodge the rate limit by forging the header.
+# (Named 11-* so it is sourced before 20-envsubst-on-templates.sh.)
+REAL_IP_CONFIG=""
+if [ -n "${REAL_IP_FROM:-}" ]; then
+    for cidr in $(echo "$REAL_IP_FROM" | tr ',' ' '); do
+        REAL_IP_CONFIG="${REAL_IP_CONFIG}set_real_ip_from ${cidr};
+    "
+    done
+    REAL_IP_CONFIG="${REAL_IP_CONFIG}real_ip_header X-Forwarded-For;
+    real_ip_recursive on;"
+fi
+export REAL_IP_CONFIG

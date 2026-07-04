@@ -9,8 +9,10 @@ RUN apk add --no-cache openssl \
         -days 825 -subj "/CN=localhost" \
         -addext "subjectAltName=DNS:localhost,DNS:nginx-pq,DNS:control-plane"
 
-# 10-*.envsh is *sourced* by the base entrypoint, so PQ_ENFORCE reaches the
-# template-substitution step that follows.
+# *.envsh files are *sourced* by the base entrypoint, so PQ_ENFORCE and
+# REAL_IP_CONFIG reach the template substitution — which runs as
+# 20-envsubst-on-templates.sh, hence the names sorting before "20-e".
 COPY 10-pq.envsh /docker-entrypoint.d/10-pq.envsh
+COPY 11-real-ip.envsh /docker-entrypoint.d/11-real-ip.envsh
 COPY default.conf.template /etc/nginx/templates/default.conf.template
-RUN chmod +x /docker-entrypoint.d/10-pq.envsh
+RUN chmod +x /docker-entrypoint.d/10-pq.envsh /docker-entrypoint.d/11-real-ip.envsh

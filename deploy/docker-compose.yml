@@ -60,6 +60,9 @@ services:
     environment:
       # "on" makes sensitive endpoints refuse non-PQ connections (fail-closed).
       REQUIRE_PQ: "${REQUIRE_PQ:-off}"
+      # Trusted LB CIDR(s), comma-separated: recover the client IP from
+      # X-Forwarded-For (empty = direct clients, header not trusted).
+      REAL_IP_FROM: "${REAL_IP_FROM:-}"
     ports:
       - "8443:443"
 

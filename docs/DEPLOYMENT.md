@@ -106,6 +106,12 @@ It also rate-limits the unauthenticated auth endpoints (`/auth/cas/login`,
 then `429` — enough for any human login, a wall for code-guessing or
 session-minting abuse.
 
+If nginx-pq itself sits behind a load balancer, set `REAL_IP_FROM` to the
+LB's address(es)/CIDR(s) (comma-separated): the client IP is then recovered
+from `X-Forwarded-For` so the rate limit keys on the real client, not the LB.
+Leave it empty when clients connect directly — trusting `X-Forwarded-For`
+from arbitrary peers would let anyone dodge the limit by forging the header.
+
 ## Toward production (not done yet)
 
 The dev stack cuts corners a real deployment must fix:
