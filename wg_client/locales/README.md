@@ -38,7 +38,7 @@ LANG=fr_FR.UTF-8 wg-client --help
    xgettext --language=Python --from-code=UTF-8 --keyword=_ \
        --output=locales/wdg.pot \
        --package-name=wdg --package-version=0.1 \
-       main.py auth.py tunnel.py
+       main.py auth.py tunnel.py plan.py pqtls.py
    ```
 
 3. Merge the new strings into the French catalog:
