@@ -1,11 +1,12 @@
 """
 WDG gateway agent.
 
-Runs on each egress node. It generates a WireGuard keypair, brings up the
-tunnel interface, and then continuously reconciles its peers against the control
-plane's sync API: peers the control plane authorizes are programmed with `wg
-set`; peers that disappear are removed. It also installs the NAT/forwarding
-rules that let authorized tunnel traffic egress to the protected networks.
+Runs on each egress node. It loads (or generates once) a persistent WireGuard
+keypair, brings up the tunnel interface, and then continuously reconciles its
+peers against the control plane's sync API: peers the control plane authorizes
+are programmed with `wg set`; peers that disappear are removed. It also
+installs the NAT/forwarding rules that let authorized tunnel traffic egress to
+the protected networks.
 
 Kernel WireGuard is used (``ip link add type wireguard``); the container only
 needs NET_ADMIN.
@@ -23,6 +24,9 @@ CONTROL_PLANE = os.environ["WDG_CONTROL_PLANE"].rstrip("/")
 SYNC_TOKEN = os.environ["WDG_GATEWAY_TOKEN"]
 IFACE = os.environ.get("WDG_WG_IFACE", "wg0")
 POLL_INTERVAL = int(os.environ.get("WDG_POLL_INTERVAL", "5"))
+# The private key persists here so a restart keeps the public key the clients'
+# configs point at (an ephemeral key would silently break every tunnel).
+STATE_DIR = os.environ.get("WDG_STATE_DIR", "/var/lib/wdg")
 
 
 def run(cmd: list[str], check: bool = True, capture: bool = False) -> str:
@@ -36,8 +40,19 @@ def log(msg: str):
 
 # --- WireGuard key management ---------------------------------------------
 
-def gen_keypair() -> tuple[str, str]:
-    private = subprocess.run(["wg", "genkey"], check=True, text=True, capture_output=True).stdout.strip()
+def load_or_create_keypair() -> tuple[str, str]:
+    key_file = os.path.join(STATE_DIR, "wg-private.key")
+    if os.path.exists(key_file):
+        with open(key_file) as fh:
+            private = fh.read().strip()
+    else:
+        os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+        private = subprocess.run(
+            ["wg", "genkey"], check=True, text=True, capture_output=True
+        ).stdout.strip()
+        fd = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            fh.write(private)
     public = subprocess.run(
         ["wg", "pubkey"], input=private, check=True, text=True, capture_output=True
     ).stdout.strip()
@@ -57,16 +72,26 @@ def iface_exists() -> bool:
     return subprocess.run(["ip", "link", "show", IFACE], capture_output=True).returncode == 0
 
 
-def ensure_interface(private_key: str, address: str, prefixlen: int, listen_port: int):
-    if iface_exists():
-        return
-    log(f"creating interface {IFACE} ({address}/{prefixlen}, port {listen_port})")
-    run(["ip", "link", "add", "dev", IFACE, "type", "wireguard"])
+def _set_private_key(private_key: str, listen_port: int):
     key_path = _write_secret(private_key)
     try:
         run(["wg", "set", IFACE, "private-key", key_path, "listen-port", str(listen_port)])
     finally:
         os.unlink(key_path)
+
+
+def ensure_interface(private_key: str, public_key: str, address: str, prefixlen: int, listen_port: int):
+    if iface_exists():
+        # A pre-existing interface (agent restart on a live host) may carry a
+        # different key than the one we advertise to the control plane.
+        current = run(["wg", "show", IFACE, "public-key"], capture=True).strip()
+        if current != public_key:
+            log(f"interface {IFACE} key out of sync, reinstalling private key")
+            _set_private_key(private_key, listen_port)
+        return
+    log(f"creating interface {IFACE} ({address}/{prefixlen}, port {listen_port})")
+    run(["ip", "link", "add", "dev", IFACE, "type", "wireguard"])
+    _set_private_key(private_key, listen_port)
     run(["ip", "addr", "add", f"{address}/{prefixlen}", "dev", IFACE])
     run(["ip", "link", "set", IFACE, "up"])
 
@@ -98,16 +123,25 @@ def ensure_forwarding(subnet: str):
     )
 
 
+_egress_rules: list[tuple[str, str]] | None = None
+
+
 def rebuild_egress_firewall(peers: list[dict]):
     """
-    Rebuild FWD_CHAIN from scratch: each peer may reach only its permitted exit
-    networks; anything else from the tunnel is dropped (default-deny egress).
+    Rebuild FWD_CHAIN so each peer may reach only its permitted exit networks;
+    anything else from the tunnel is dropped (default-deny egress). Skipped
+    when nothing changed: the flush/append cycle briefly leaves the chain
+    empty, and its behaviour then depends on the host's FORWARD policy.
     """
+    global _egress_rules
+    rules = [(p["address"], net) for p in peers for net in p.get("networks", [])]
+    if rules == _egress_rules:
+        return
     run(["iptables", "-F", FWD_CHAIN])
-    for peer in peers:
-        for net in peer.get("networks", []):
-            run(["iptables", "-A", FWD_CHAIN, "-s", peer["address"], "-d", net, "-j", "ACCEPT"])
+    for address, net in rules:
+        run(["iptables", "-A", FWD_CHAIN, "-s", address, "-d", net, "-j", "ACCEPT"])
     run(["iptables", "-A", FWD_CHAIN, "-j", "DROP"])
+    _egress_rules = rules
 
 
 # --- Peer reconciliation ---------------------------------------------------
@@ -167,7 +201,7 @@ def sync(public_key: str) -> dict:
 
 
 def main():
-    private_key, public_key = gen_keypair()
+    private_key, public_key = load_or_create_keypair()
     log(f"public key: {public_key}")
 
     configured = False
@@ -181,7 +215,9 @@ def main():
 
         if not configured:
             prefixlen = int(state["tunnel_subnet"].split("/")[1])
-            ensure_interface(private_key, state["address"], prefixlen, state["listen_port"])
+            ensure_interface(
+                private_key, public_key, state["address"], prefixlen, state["listen_port"]
+            )
             ensure_forwarding(state["tunnel_subnet"])
             configured = True
 

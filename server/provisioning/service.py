@@ -16,6 +16,10 @@ from core import resolve
 from core.models import Device, Gateway
 
 
+class PublicKeyConflict(Exception):
+    """The public key is already registered by a different user."""
+
+
 def generate_psk() -> str:
     """A fresh WireGuard preshared key (32 random bytes, base64)."""
     return base64.b64encode(secrets.token_bytes(32)).decode()
@@ -61,7 +65,13 @@ def register_devices(user: User, public_key: str) -> list[Device]:
     One keypair is reused across gateways; each gateway gets its own address and
     PSK, both stable across re-registration. Returns the list of devices (empty
     if the user has no VPN access).
+
+    A public key may belong to only one user: on the gateways a peer *is* its
+    public key, so letting a second user claim it would let them clobber the
+    first user's peer entry (allowed-ips) via ``wg set``.
     """
+    if Device.objects.exclude(user=user).filter(public_key=public_key).exists():
+        raise PublicKeyConflict(public_key)
     return [
         _register_on(user, gateway, public_key)
         for gateway in resolve.gateways_for_user(user)

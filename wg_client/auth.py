@@ -4,8 +4,10 @@ Authentication for the WDG client (Apereo CAS v3, via the control plane).
 The client never speaks the CAS protocol itself: it opens the browser at the
 control plane's ``/auth/cas/login`` endpoint (passing its loopback callback as
 the ``redirect``), lets the control plane handle the CAS ticket round-trip, and
-receives a WDG session token on the loopback redirect. That token is stored in
-the OS keyring and sent as a bearer token on subsequent API calls.
+receives a **one-time code** on the loopback redirect. The code is immediately
+exchanged (POST ``/auth/cas/exchange``) for the WDG session token, so the token
+itself never transits a URL. The token is stored in the OS keyring and sent as
+a bearer token on subsequent API calls.
 """
 
 import http.server
@@ -15,6 +17,7 @@ import urllib.parse
 import webbrowser
 
 import keyring
+import requests
 
 from wg_client.i18n import _
 
@@ -36,8 +39,8 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
 
-        if "wdg_token" in params:
-            _CallbackHandler.result = {"token": params["wdg_token"][0]}
+        if "wdg_code" in params:
+            _CallbackHandler.result = {"code": params["wdg_code"][0]}
             message = _("Authentication successful. You may close this tab.")
         else:
             error = params.get("error", ["unknown"])[0]
@@ -84,9 +87,18 @@ def login(server: str) -> str:
             _("Authentication error: {error}").format(error=_CallbackHandler.result["error"])
         )
 
-    token = _CallbackHandler.result["token"]
+    token = _exchange_code(server, _CallbackHandler.result["code"])
     keyring.set_password(KEYRING_SERVICE, KEYRING_TOKEN, token)
     return token
+
+
+def _exchange_code(server: str, code: str) -> str:
+    """Trade the one-time code from the loopback redirect for the session token."""
+    resp = requests.post(
+        server.rstrip("/") + "/auth/cas/exchange", json={"code": code}, timeout=15
+    )
+    resp.raise_for_status()
+    return resp.json()["wdg_token"]
 
 
 def get_token(server: str, force: bool = False) -> str:

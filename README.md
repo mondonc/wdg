@@ -63,7 +63,7 @@ An end-to-end proof of concept is implemented and **tested in Docker** (Linux da
 - [x] Python client (Linux) — tested end-to-end
 - [ ] Python client (macOS / Windows) — code present, **not yet validated on those OSes**
 - [ ] Web enrollment portal *(nice-to-have)*
-- [ ] Production hardening (secrets, TLS certs, HA, persistent gateway keys)
+- [ ] Production hardening (secrets, TLS certs, HA)
 
 ---
 

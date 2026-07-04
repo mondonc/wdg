@@ -114,6 +114,9 @@ services:
     environment:
       WDG_CONTROL_PLANE: http://control-plane:8000
       WDG_GATEWAY_TOKEN: gw-a-sync-secret
+    volumes:
+      # Persistent WireGuard key: the gateway keeps its identity across restarts.
+      - gwa-state:/var/lib/wdg
     networks:
       default: {}
       exitnet: {}
@@ -149,3 +152,4 @@ networks:
 
 volumes:
   pgdata:
+  gwa-state:

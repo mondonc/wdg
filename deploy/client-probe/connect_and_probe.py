@@ -42,7 +42,12 @@ def login_as(username: str) -> str:
         if "/cas/login" in location and "username=" not in location:
             location += ("&" if "?" in location else "?") + f"username={username}"
         if location.startswith(LOOPBACK):
-            return parse_qs(urlsplit(location).query)["wdg_token"][0]
+            code = parse_qs(urlsplit(location).query)["wdg_code"][0]
+            resp = requests.post(
+                f"{CONTROL_PLANE}/auth/cas/exchange", json={"code": code}, timeout=15
+            )
+            resp.raise_for_status()
+            return resp.json()["wdg_token"]
         url = location
     fail("did not obtain a token")
 

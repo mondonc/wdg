@@ -2,6 +2,7 @@ import ipaddress
 import json
 
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from casauth.bearer import require_bearer
@@ -13,6 +14,7 @@ from . import service, wgconf
 GATEWAY_LISTEN_PORT = 51820
 
 
+@csrf_exempt
 @require_bearer
 @require_http_methods(["POST"])
 def register_peer(request):
@@ -26,7 +28,12 @@ def register_peer(request):
     if not public_key:
         return JsonResponse({"detail": "public_key required"}, status=400)
 
-    devices = service.register_devices(request.wdg_user, public_key)
+    try:
+        devices = service.register_devices(request.wdg_user, public_key)
+    except service.PublicKeyConflict:
+        return JsonResponse(
+            {"detail": "public key already registered by another user"}, status=409
+        )
     if not devices:
         return JsonResponse({"detail": "no VPN access for this user"}, status=403)
 
@@ -99,6 +106,7 @@ def _gateway_address(gateway: Gateway) -> str:
     return str(next(ipaddress.ip_network(gateway.tunnel_subnet, strict=False).hosts()))
 
 
+@csrf_exempt
 @require_http_methods(["POST"])
 def gateway_sync(request):
     """
@@ -122,9 +130,11 @@ def gateway_sync(request):
         gateway.public_key = public_key
         gateway.save(update_fields=["public_key"])
 
-    devices = (
+    devices = list(
         Device.objects.filter(gateway=gateway, is_active=True, user__is_active=True)
-        .select_related("user")
+    )
+    networks_by_user = resolve.networks_via_gateway_bulk(
+        {d.user_id for d in devices}, gateway
     )
     peers = [
         {
@@ -132,7 +142,7 @@ def gateway_sync(request):
             "preshared_key": d.preshared_key,
             "address": d.address,
             "allowed_ips": [f"{d.address}/32"],
-            "networks": [n.cidr for n in resolve.networks_via_gateway(d.user, gateway)],
+            "networks": networks_by_user[d.user_id],
         }
         for d in devices
     ]

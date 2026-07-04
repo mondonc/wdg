@@ -2,7 +2,8 @@
 M0 end-to-end integration test (runs inside the compose network).
 
 Walks the full CASv3 login the way the CLI client's browser would:
-    /auth/cas/login -> mock CAS -> /auth/cas/callback -> loopback?wdg_token=...
+    /auth/cas/login -> mock CAS -> /auth/cas/callback -> loopback?wdg_code=...
+    -> POST /auth/cas/exchange -> wdg_token
 then checks the minted token against /api/whoami/ and asserts the CAS groups
 were mirrored onto the user.
 
@@ -25,8 +26,17 @@ EXPECTED = {
 }
 
 
+def exchange_code(code: str) -> str:
+    """Trade the one-time loopback code for the WDG session token."""
+    resp = requests.post(
+        f"{CONTROL_PLANE}/auth/cas/exchange", json={"code": code}, timeout=15
+    )
+    assert resp.status_code == 200, (resp.status_code, resp.text)
+    return resp.json()["wdg_token"]
+
+
 def login_as(username: str) -> str:
-    """Drive the browser redirect chain, return the WDG token from the loopback."""
+    """Drive the browser redirect chain, exchange the loopback code for a token."""
     session = requests.Session()
     url = f"{CONTROL_PLANE}/auth/cas/login?redirect={LOOPBACK}"
 
@@ -41,10 +51,10 @@ def login_as(username: str) -> str:
             location += ("&" if "?" in location else "?") + f"username={username}"
 
         if location.startswith(LOOPBACK):
-            token = parse_qs(urlsplit(location).query).get("wdg_token", [None])[0]
-            if not token:
-                raise AssertionError(f"no wdg_token in loopback redirect: {location}")
-            return token
+            code = parse_qs(urlsplit(location).query).get("wdg_code", [None])[0]
+            if not code:
+                raise AssertionError(f"no wdg_code in loopback redirect: {location}")
+            return exchange_code(code)
 
         url = location
 

@@ -40,6 +40,15 @@ class ProvisioningTests(TestCase):
         carol = self._user("carol", [])
         self.assertEqual(service.register_devices(carol, "KEY"), [])
 
+    def test_public_key_cannot_be_claimed_by_another_user(self):
+        alice = self._user("alice", ["vpn-users"])
+        mallory = self._user("mallory", ["vpn-users"])
+        service.register_devices(alice, "SHARED_KEY")
+        with self.assertRaises(service.PublicKeyConflict):
+            service.register_devices(mallory, "SHARED_KEY")
+        # The legitimate owner can still re-register their own key.
+        service.register_devices(alice, "SHARED_KEY")
+
     def test_config_is_scoped_to_the_gateway(self):
         from core import resolve
         from core.models import Gateway

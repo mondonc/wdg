@@ -8,6 +8,8 @@ Configuration is read from the environment so the same image runs in dev
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -15,8 +17,15 @@ def _env_list(name: str, default: str = "") -> list[str]:
     return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
 
 
-SECRET_KEY = os.environ.get("WDG_SECRET_KEY", "dev-insecure-change-me")
-DEBUG = os.environ.get("WDG_DEBUG", "1") == "1"
+DEBUG = os.environ.get("WDG_DEBUG", "0") == "1"
+
+# Outside dev, refuse to start with the well-known fallback key: a signed-token
+# scheme with a public SECRET_KEY is no authentication at all.
+SECRET_KEY = os.environ.get("WDG_SECRET_KEY", "")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("WDG_SECRET_KEY must be set when WDG_DEBUG is off")
+    SECRET_KEY = "dev-insecure-change-me"
 ALLOWED_HOSTS = _env_list("WDG_ALLOWED_HOSTS", "*") or ["*"]
 
 # --- CAS / SSO -------------------------------------------------------------
@@ -30,6 +39,9 @@ PUBLIC_BASE_URL = os.environ.get("WDG_PUBLIC_BASE_URL", "http://localhost:8000")
 ALLOWED_CLIENT_REDIRECT_HOSTS = ("localhost", "127.0.0.1")
 # Lifetime of an issued WDG session token (seconds).
 WDG_TOKEN_MAX_AGE = int(os.environ.get("WDG_TOKEN_MAX_AGE", str(12 * 3600)))
+# Lifetime of the one-time code handed to the loopback redirect (seconds).
+# Only needs to cover the client turning around and POSTing /auth/cas/exchange.
+WDG_AUTH_CODE_MAX_AGE = int(os.environ.get("WDG_AUTH_CODE_MAX_AGE", "60"))
 # CAS attribute names that carry group / affiliation membership.
 CAS_GROUP_ATTRIBUTES = _env_list("WDG_CAS_GROUP_ATTRIBUTES", "memberOf")
 
@@ -49,6 +61,9 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    # Protects the session-authenticated admin. Token-authenticated API POSTs
+    # are individually @csrf_exempt (bearer tokens are not sent by browsers).
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
 ]

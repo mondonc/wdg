@@ -36,6 +36,25 @@ def networks_via_gateway(user: User, gateway: Gateway) -> list["Network"]:
     return [n for n in gateway.networks.all() if n.pk in granted]
 
 
+def networks_via_gateway_bulk(user_ids: set[int], gateway: Gateway) -> dict[int, list[str]]:
+    """
+    Batch variant of :func:`networks_via_gateway` for the sync API: the CIDRs
+    each user may reach through this gateway, computed in two queries instead
+    of several per user.
+    """
+    granted: dict[int, set[int]] = {uid: set() for uid in user_ids}
+    pairs = Network.objects.filter(groups__members__in=user_ids).values_list(
+        "pk", "groups__members"
+    )
+    for network_pk, user_id in pairs:
+        granted[user_id].add(network_pk)
+    gateway_networks = list(gateway.networks.all())
+    return {
+        uid: [n.cidr for n in gateway_networks if n.pk in granted[uid]]
+        for uid in user_ids
+    }
+
+
 def allowed_ips_for_user(user: User, gateway: Gateway | None = None) -> list[str]:
     """
     AllowedIPs to push into the client conf.

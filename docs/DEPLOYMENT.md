@@ -34,9 +34,11 @@ Flow:
 2. The control plane redirects to `<cas-server>/cas/login?service=<control-plane>/auth/cas/callback`.
 3. CAS returns to the callback with a ticket; the control plane validates it via
    `/cas/p3/serviceValidate`, reads identity + attributes, upserts the user and
-   mirrors group membership, then mints a **WDG token**.
-4. The token is handed back to the client on the loopback redirect and used as
-   `Authorization: Bearer` for the API.
+   mirrors group membership, then issues a **single-use code** (60 s lifetime).
+4. The code is handed back to the client on the loopback redirect; the client
+   exchanges it with a `POST /auth/cas/exchange` for the **WDG token**, used as
+   `Authorization: Bearer` for the API. The bearer token itself never appears
+   in a URL (browser history, proxies, access logs).
 
 ### What to request from the SSO team
 
@@ -53,20 +55,22 @@ All settings come from the environment (see `server/wdg_server/settings.py`):
 
 | Variable | Meaning |
 |---|---|
-| `WDG_SECRET_KEY` | Django secret (also signs WDG tokens) — set a strong value |
-| `WDG_DEBUG` | `1`/`0` |
+| `WDG_SECRET_KEY` | Django secret (also signs WDG tokens) — set a strong value; **required** unless `WDG_DEBUG=1` |
+| `WDG_DEBUG` | `1`/`0` (default `0`) |
 | `WDG_ALLOWED_HOSTS` | comma-separated hostnames |
 | `WDG_CAS_BASE_URL` | CAS base, e.g. `https://cas.example.org` |
 | `WDG_PUBLIC_BASE_URL` | public base of the control plane (the CAS `service` root) |
 | `WDG_CAS_GROUP_ATTRIBUTES` | CAS attributes carrying groups (default `memberOf`) |
 | `WDG_TOKEN_MAX_AGE` | WDG token lifetime, seconds |
+| `WDG_AUTH_CODE_MAX_AGE` | lifetime of the one-time login code, seconds (default 60) |
 | `POSTGRES_*` | database connection |
 
 ## Gateways
 
 Each gateway runs the agent (`gateway/agent.py`). It:
 
-1. generates a WireGuard keypair and self-reports the public key at sync time;
+1. loads its WireGuard keypair from `WDG_STATE_DIR` (generated once, then
+   persistent across restarts) and self-reports the public key at sync time;
 2. brings up kernel WireGuard (`ip link add … type wireguard`), assigns the
    gateway's tunnel address, enables forwarding and MASQUERADE;
 3. every few seconds POSTs `/api/gateways/sync/` with its sync token, receives
@@ -80,6 +84,7 @@ Agent environment:
 | `WDG_GATEWAY_TOKEN` | the gateway's `sync_token` (see the `Gateway` admin) |
 | `WDG_WG_IFACE` | interface name (default `wg0`) |
 | `WDG_POLL_INTERVAL` | sync interval in seconds (default 5) |
+| `WDG_STATE_DIR` | where the private key persists (default `/var/lib/wdg`) — back it by a volume in containers |
 
 Runtime requirements: `NET_ADMIN` capability, `net.ipv4.ip_forward=1`, and a host
 kernel with WireGuard. In containers this is `cap_add: [NET_ADMIN]` +
