@@ -101,6 +101,11 @@ Register a gateway in the admin (or `seed_demo`): set `name`, `endpoint`
 proxies to the control plane. `REQUIRE_PQ=on` makes the sensitive endpoints
 refuse non-post-quantum connections. See [POST-QUANTUM.md](POST-QUANTUM.md).
 
+It also rate-limits the unauthenticated auth endpoints (`/auth/cas/login`,
+`/auth/cas/exchange`): 10 requests/minute per client IP with a burst of 5,
+then `429` — enough for any human login, a wall for code-guessing or
+session-minting abuse.
+
 ## Toward production (not done yet)
 
 The dev stack cuts corners a real deployment must fix:
@@ -109,8 +114,6 @@ The dev stack cuts corners a real deployment must fix:
   demo values — generate and inject real secrets.
 - **TLS certificates**: `nginx-pq` uses a self-signed cert. Use a real cert
   (internal CA or ACME) and remove `-k`/`verify=False` from clients.
-- **Persistent gateway keys**: the agent generates an ephemeral keypair per
-  start. Persist it so restarts don't force clients to re-fetch.
 - **Database/HA**: managed PostgreSQL, backups, multiple control-plane replicas.
 - **Runserver → gunicorn**: the compose uses Django's dev server; serve via
   gunicorn behind nginx.
