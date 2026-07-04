@@ -1,7 +1,8 @@
+import hashlib
 import ipaddress
 import json
 
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseNotModified, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
@@ -83,30 +84,38 @@ def get_plan(request):
         for d in Device.objects.filter(user=user, is_active=True, gateway_id__in=gateway_ids)
     }
     site = resolve.user_site(user)
-    return JsonResponse(
-        {
-            "site": site.name if site else None,
-            "tunnels": [
-                {
-                    "service": t.service.name,
-                    "default_route": t.service.default_route,
-                    "allowed_ips": t.allowed_ips,
-                    "instances": [
-                        {
-                            "gateway": g.name,
-                            "site": g.site.name if g.site else None,
-                            "endpoint": g.endpoint,
-                            "public_key": g.public_key,
-                            "address": devices[g.pk].address if g.pk in devices else None,
-                            "preshared_key": devices[g.pk].preshared_key if g.pk in devices else None,
-                        }
-                        for g in t.instances
-                    ],
-                }
-                for t in tunnels
-            ],
-        }
-    )
+    payload = {
+        "site": site.name if site else None,
+        "tunnels": [
+            {
+                "service": t.service.name,
+                "default_route": t.service.default_route,
+                "allowed_ips": t.allowed_ips,
+                "instances": [
+                    {
+                        "gateway": g.name,
+                        "site": g.site.name if g.site else None,
+                        "endpoint": g.endpoint,
+                        "public_key": g.public_key,
+                        "address": devices[g.pk].address if g.pk in devices else None,
+                        "preshared_key": devices[g.pk].preshared_key if g.pk in devices else None,
+                    }
+                    for g in t.instances
+                ],
+            }
+            for t in tunnels
+        ],
+    }
+
+    # Cheap change detection for future polling clients: same plan, same ETag.
+    body = json.dumps(payload, sort_keys=True).encode()
+    etag = f'"{hashlib.sha256(body).hexdigest()[:32]}"'
+    if request.headers.get("If-None-Match") == etag:
+        response = HttpResponseNotModified()
+    else:
+        response = JsonResponse(payload)
+    response["ETag"] = etag
+    return response
 
 
 @require_bearer

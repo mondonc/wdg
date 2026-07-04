@@ -1,9 +1,9 @@
 # Multi-tunnel architecture (design)
 
-> Status: **M8–M11 implemented** (control plane, gateway agent, multi-tunnel
-> client, e2e failover); M12 hardening pending (2026-07-04). The dev stack
-> exercises two simultaneous tunnels, a real gw-a → gw-dc relay chain, and
-> failover to the gw-a2 instance (both dead-DNS and silent-instance cases).
+> Status: **implemented (M8–M12)**, 2026-07-04. The dev stack exercises two
+> simultaneous tunnels, a real gw-a → gw-dc relay chain, and failover to the
+> gw-a2 instance (both dead-DNS and silent-instance cases). Fleet subnet
+> disjointness is admin-validated; `/api/plan/` supports ETag/304.
 
 ## Goals
 

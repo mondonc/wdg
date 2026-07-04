@@ -89,6 +89,26 @@ class ProvisioningTests(TestCase):
         self.assertIsNone(instance["address"])
         self.assertIsNone(instance["preshared_key"])
 
+    def test_plan_etag_yields_304_until_the_plan_changes(self):
+        from casauth import tokens
+        from core.models import Network
+
+        alice = self._user("alice", ["vpn-users"])
+        service.register_devices(alice, "PUBKEY_ALICE")
+        auth = {"HTTP_AUTHORIZATION": f"Bearer {tokens.mint(alice)}"}
+
+        first = self.client.get("/api/plan/", **auth)
+        etag = first["ETag"]
+        again = self.client.get("/api/plan/", HTTP_IF_NONE_MATCH=etag, **auth)
+        self.assertEqual(again.status_code, 304)
+
+        # Granting a new network changes the plan, hence the ETag.
+        group = alice.wdg_groups.get(name="vpn-users")
+        group.networks.add(Network.objects.get(name="net-lab-a"))
+        changed = self.client.get("/api/plan/", HTTP_IF_NONE_MATCH=etag, **auth)
+        self.assertEqual(changed.status_code, 200)
+        self.assertNotEqual(changed["ETag"], etag)
+
     def test_plan_without_access_is_403(self):
         from casauth import tokens
 

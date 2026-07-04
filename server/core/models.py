@@ -12,7 +12,10 @@ from CAS attributes at login, but can also be managed by hand in the admin
 See docs/DESIGN-MULTITUNNEL.md for the full design.
 """
 
+import ipaddress
+
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -88,6 +91,27 @@ class Gateway(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def clean(self):
+        """
+        Tunnel subnets must be valid CIDRs and disjoint across the fleet:
+        client addresses travel un-NATed between gateways, so an overlap
+        would make relayed sources ambiguous (routing and enforcement).
+        """
+        try:
+            subnet = ipaddress.ip_network(self.tunnel_subnet, strict=False)
+        except ValueError as exc:
+            raise ValidationError({"tunnel_subnet": f"invalid CIDR: {exc}"})
+        others = Gateway.objects.exclude(pk=self.pk).values_list("name", "tunnel_subnet")
+        for name, other_subnet in others:
+            try:
+                other = ipaddress.ip_network(other_subnet, strict=False)
+            except ValueError:
+                continue
+            if subnet.overlaps(other):
+                raise ValidationError(
+                    {"tunnel_subnet": f"overlaps gateway '{name}' ({other_subnet})"}
+                )
 
 
 class RelayLink(models.Model):

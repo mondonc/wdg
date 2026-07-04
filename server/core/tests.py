@@ -389,6 +389,33 @@ class SyncTopologyTests(RelayTopologyTestCase):
         self.assertEqual(rules, [{"src": "10.21.0.3", "dst": "172.16.30.0/24"}])
 
 
+class GatewayValidationTests(SeededTestCase):
+    def _gateway(self, subnet):
+        return Gateway(name="new-gw", endpoint="new-gw:51820", tunnel_subnet=subnet)
+
+    def test_invalid_cidr_is_rejected(self):
+        from django.core.exceptions import ValidationError
+
+        with self.assertRaises(ValidationError):
+            self._gateway("not-a-cidr").clean()
+
+    def test_overlapping_subnet_is_rejected(self):
+        from django.core.exceptions import ValidationError
+
+        # 10.10.0.0/16 covers gw-a's 10.10.0.0/24.
+        with self.assertRaises(ValidationError):
+            self._gateway("10.10.0.0/16").clean()
+        with self.assertRaises(ValidationError):
+            self._gateway("10.10.1.128/25").clean()  # inside gw-b's /24
+
+    def test_disjoint_subnet_is_accepted(self):
+        self._gateway("10.99.0.0/24").clean()
+
+    def test_editing_own_subnet_does_not_self_conflict(self):
+        gw = Gateway.objects.get(name="gw-a")
+        gw.clean()
+
+
 class AddressAllocationTests(SeededTestCase):
     def test_allocation_skips_gateway_ip_and_avoids_collisions(self):
         gw = Gateway.objects.get(name="gw-a")
