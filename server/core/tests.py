@@ -77,7 +77,9 @@ class AccessResolutionTests(SeededTestCase):
         sync.sync_membership(alice, ["vpn-users", "vpn-admins", "research-lab-a"])
         access = resolve.access_for_user(alice)
         # gw-dc is relay-only (accepts_clients=False): never a client gateway.
-        self.assertEqual(sorted(g.name for g in access["gateways"]), ["gw-a", "gw-b"])
+        self.assertEqual(
+            sorted(g.name for g in access["gateways"]), ["gw-a", "gw-a2", "gw-b"]
+        )
         self.assertEqual(
             sorted(resolve.allowed_ips_for_user(alice)),
             ["10.0.0.0/24", "192.168.20.0/24", "192.168.30.0/24", "192.168.40.0/24"],
@@ -87,7 +89,9 @@ class AccessResolutionTests(SeededTestCase):
         bob = User.objects.create(username="bob")
         sync.sync_membership(bob, ["vpn-users", "research-lab-b"])
         access = resolve.access_for_user(bob)
-        self.assertEqual(sorted(g.name for g in access["gateways"]), ["gw-a", "gw-b"])
+        self.assertEqual(
+            sorted(g.name for g in access["gateways"]), ["gw-a", "gw-a2", "gw-b"]
+        )
         self.assertEqual(
             sorted(resolve.allowed_ips_for_user(bob)),
             ["10.0.0.0/24", "192.168.30.0/24"],
@@ -106,7 +110,7 @@ class AccessResolutionTests(SeededTestCase):
         sync.sync_membership(alice, ["vpn-admins"])
         Gateway.objects.filter(name="gw-b").update(is_active=False)
         access = resolve.access_for_user(alice)
-        self.assertEqual([g.name for g in access["gateways"]], ["gw-a"])
+        self.assertEqual([g.name for g in access["gateways"]], ["gw-a", "gw-a2"])
 
 
 class PerGatewayScopingTests(SeededTestCase):

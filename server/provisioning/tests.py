@@ -21,17 +21,18 @@ class ProvisioningTests(TestCase):
     def test_register_provisions_a_device_on_every_allowed_gateway(self):
         alice = self._user("alice", ["vpn-users", "vpn-admins", "research-lab-a"])
         devices = service.register_devices(alice, "PUBKEY_ALICE")
-        self.assertEqual(sorted(d.gateway.name for d in devices), ["gw-a", "gw-b"])
+        # Every active instance of every granted entry service.
+        self.assertEqual(sorted(d.gateway.name for d in devices), ["gw-a", "gw-a2", "gw-b"])
         # First host of each subnet is the gateway; devices start at .2.
         self.assertEqual({d.gateway.name: d.address for d in devices},
-                         {"gw-a": "10.10.0.2", "gw-b": "10.10.1.2"})
+                         {"gw-a": "10.10.0.2", "gw-a2": "10.10.3.2", "gw-b": "10.10.1.2"})
 
     def test_register_is_idempotent_and_rotates_key(self):
-        alice = self._user("alice", ["vpn-users"])  # gw-a only
-        d1 = service.register_devices(alice, "KEY_1")[0]
+        alice = self._user("alice", ["vpn-users"])  # service gw-a (2 instances)
+        d1 = service.register_devices(alice, "KEY_1")[0]  # gw-a first by name
         addr, psk = d1.address, d1.preshared_key
         d2 = service.register_devices(alice, "KEY_2")[0]
-        self.assertEqual(Device.objects.filter(user=alice).count(), 1)
+        self.assertEqual(Device.objects.filter(user=alice).count(), 2)
         self.assertEqual(d2.address, addr)  # stable address
         self.assertEqual(d2.preshared_key, psk)  # stable PSK
         self.assertEqual(d2.public_key, "KEY_2")  # rotated key

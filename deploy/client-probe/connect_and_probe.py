@@ -1,15 +1,19 @@
 """
-Client probe: full client flow against the live stack + a real WireGuard tunnel,
-used to validate M3 (reachability), M4 (group-scoped egress, revocation) and
-M9 (relayed networks: the tunnel conf comes from the multi-tunnel plan API, so
-AllowedIPs include what is reachable through relay chains).
+Client probe: full client flow against the live stack + real WireGuard
+tunnels, used to validate M3 (reachability), M4 (group-scoped egress,
+revocation), M9 (relayed networks) and M10/M11 (multi-tunnel + failover).
+
+It drives the *real* client code: the plan from ``/api/plan/`` is brought up
+by ``wg_client.plan.connect_plan`` — every tunnel at once, failing over
+between a service's instances when one does not handshake.
 
 Env:
   USERNAME   CAS user to log in as (default alice)
-  GATEWAY    optional service/instance name to select the tunnel — defaults to
-             the plan's first tunnel
-  REACH      comma-separated URLs that MUST be reachable through the tunnel
+  GATEWAY    optional service/instance name: bring up only that tunnel
+  REACH      comma-separated URLs that MUST be reachable through the tunnels
   DENY       comma-separated URLs that MUST NOT be reachable
+  EXPECT_VIA optional "service=gateway" assertions on the connected instance,
+             comma-separated (e.g. "gw-a=gw-a2" after a failover)
   MODE       "probe" (default: test then exit) or "hold" (test then stay up)
 """
 
@@ -21,14 +25,18 @@ from urllib.parse import parse_qs, urlsplit
 
 import requests
 
+from wg_client import plan as wgplan
+
 CONTROL_PLANE = os.environ["CONTROL_PLANE"].rstrip("/")
 USERNAME = os.environ.get("USERNAME", "alice")
 GATEWAY = os.environ.get("GATEWAY", "")
 REACH = [u for u in os.environ.get("REACH", "").split(",") if u]
 DENY = [u for u in os.environ.get("DENY", "").split(",") if u]
+EXPECT_VIA = dict(
+    pair.split("=") for pair in os.environ.get("EXPECT_VIA", "").split(",") if pair
+)
 MODE = os.environ.get("MODE", "probe")
 LOOPBACK = "http://localhost:51820/callback"
-IFACE = "wg0"
 
 
 def fail(msg: str):
@@ -73,34 +81,6 @@ def reachable(url: str, tries: int = 1) -> bool:
     return False
 
 
-def build_conf(private_key: str, tunnel: dict) -> str:
-    instance = tunnel["instances"][0]
-    return (
-        "[Interface]\n"
-        f"PrivateKey = {private_key}\n"
-        f"Address = {instance['address']}/32\n"
-        "\n"
-        "[Peer]\n"
-        f"PublicKey = {instance['public_key']}\n"
-        f"PresharedKey = {instance['preshared_key']}\n"
-        f"Endpoint = {instance['endpoint']}\n"
-        f"AllowedIPs = {', '.join(tunnel['allowed_ips'])}\n"
-        "PersistentKeepalive = 25\n"
-    )
-
-
-def pick_tunnel(plan: dict) -> dict:
-    tunnels = plan["tunnels"]
-    if not GATEWAY:
-        return tunnels[0]
-    for tunnel in tunnels:
-        if tunnel["service"] == GATEWAY or any(
-            i["gateway"] == GATEWAY for i in tunnel["instances"]
-        ):
-            return tunnel
-    fail(f"no tunnel matching {GATEWAY} in plan: {[t['service'] for t in tunnels]}")
-
-
 def main():
     token = login_as(USERNAME)
     session = requests.Session()
@@ -112,15 +92,26 @@ def main():
         fail(f"register returned {reg.status_code}: {reg.text}")
     print(f"  · {USERNAME} registered: {reg.json()}")
 
-    plan = session.get(f"{CONTROL_PLANE}/api/plan/", timeout=15).json()
-    tunnel = pick_tunnel(plan)
-    conf = build_conf(private_key, tunnel)
-    os.makedirs("/etc/wireguard", exist_ok=True)
-    with open(f"/etc/wireguard/{IFACE}.conf", "w") as fh:
-        fh.write(conf)
+    tunnel_plan = session.get(f"{CONTROL_PLANE}/api/plan/", timeout=15).json()
+    if GATEWAY:
+        tunnel_plan["tunnels"] = [
+            t for t in tunnel_plan["tunnels"]
+            if t["service"] == GATEWAY or any(i["gateway"] == GATEWAY for i in t["instances"])
+        ] or fail(f"no tunnel matching {GATEWAY}")
 
-    subprocess.run(["wg-quick", "up", IFACE], check=True)
-    print(f"  · tunnel up via {tunnel['service']} (AllowedIPs: {', '.join(tunnel['allowed_ips'])})")
+    try:
+        states = wgplan.connect_plan(tunnel_plan, private_key)
+    except wgplan.TunnelError as exc:
+        fail(str(exc))
+    for state in states:
+        print(f"  · {state['iface']}: {state['service']} via {state['gateway']} "
+              f"(AllowedIPs: {', '.join(state['allowed_ips'])})")
+
+    for service, expected_gw in EXPECT_VIA.items():
+        actual = next((s["gateway"] for s in states if s["service"] == service), None)
+        if actual != expected_gw:
+            fail(f"expected {service} via {expected_gw}, got {actual}")
+        print(f"  ✓ EXPECT_VIA ok: {service} via {actual}")
 
     for url in REACH:
         if reachable(url, tries=15):
@@ -136,7 +127,7 @@ def main():
     print(f"probe: PASS ({USERNAME})")
 
     if MODE == "hold":
-        print("  · holding tunnel up…", flush=True)
+        print("  · holding tunnels up…", flush=True)
         while True:
             time.sleep(3600)
 

@@ -62,7 +62,7 @@ An end-to-end proof of concept is implemented and **tested in Docker** (Linux da
 - [x] CAS attribute → group mapping (+ resilience to un-released attributes)
 - [x] Multi-tunnel control plane — sites, services (gateway pools), relay graph, `/api/plan/` ([design](docs/DESIGN-MULTITUNNEL.md))
 - [x] Relay gateways — inter-gateway WireGuard links, per-hop egress enforcement, chained exit (tested: real gw-a → gw-dc chain)
-- [ ] Multi-tunnel client (simultaneous tunnels, connect-time failover)
+- [x] Multi-tunnel client — simultaneous tunnels from `/api/plan/`, connect-time failover between a service's instances (tested: instance down and instance unresponsive)
 - [x] Python client (Linux) — tested end-to-end
 - [ ] Python client (macOS / Windows) — code present, **not yet validated on those OSes**
 - [ ] Web enrollment portal *(nice-to-have)*
@@ -90,10 +90,18 @@ docker compose exec control-plane python manage.py test
 # End-to-end integration (CASv3 login, provisioning, config, CAS groups)
 docker compose run --rm tester
 
-# Real WireGuard tunnel + group-scoped egress + revocation
-docker compose --profile tunnel up -d --build gw-a exit-target exit-target-b
-docker compose --profile tunnel run --rm \
-  -e USERNAME=alice -e "REACH=http://10.0.0.10:8000,http://192.168.20.10:8000" client-probe
+# Real WireGuard tunnels: multi-tunnel plan, group-scoped egress, relay chain
+docker compose --profile tunnel up -d --build \
+  gw-a gw-a2 gw-b gw-dc exit-target exit-target-b exit-target-dc exit-target-lab-b
+docker compose --profile tunnel run --rm -e USERNAME=alice \
+  -e "REACH=http://10.0.0.10:8000,http://192.168.20.10:8000,http://192.168.30.10:8000,http://192.168.40.10:8000" \
+  client-probe
+
+# Failover: stop the preferred instance, the client falls back to gw-a2
+docker compose stop gw-a
+docker compose --profile tunnel run --rm -e USERNAME=alice \
+  -e "REACH=http://192.168.40.10:8000" -e "EXPECT_VIA=gw-a=gw-a2" client-probe
+docker compose start gw-a
 
 # Post-quantum transport (run from a host with OpenSSL >= 3.5)
 bash tests/m5_pq_check.sh
@@ -110,13 +118,20 @@ pip install -r wg_client/requirements.txt
 
 python -m wg_client.main configure --server https://vpn.example.com
 python -m wg_client.main login          # SSO, shows your identity + groups
-python -m wg_client.main connect        # provision + bring up the tunnel
-python -m wg_client.main status
+python -m wg_client.main connect        # provision + bring up every planned tunnel
+python -m wg_client.main status         # one line per tunnel (service, instance, handshake)
+python -m wg_client.main reconnect      # fresh plan, tears down and reconnects
 python -m wg_client.main disconnect
 
 # Require post-quantum TLS (fail closed if unavailable):
 python -m wg_client.main configure --server https://vpn.example.com --require-pq
 ```
+
+`connect` brings up one WireGuard tunnel per planned service (specific routes
+first, the default-route tunnel last) and fails over to another site's
+instance when the preferred one does not complete a handshake. On Windows the
+client sets the `MultipleSimultaneousTunnels` registry value the official
+WireGuard client requires for several active tunnels.
 
 French UI: `WDG_LANG=fr python -m wg_client.main --help`. Post-quantum negotiation needs the client's OpenSSL ≥ 3.5 — see [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md#client-side).
 

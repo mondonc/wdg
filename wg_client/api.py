@@ -29,6 +29,11 @@ class WireGuardAPI:
         resp.raise_for_status()
         return resp.text
 
+    def get_plan(self) -> dict:
+        resp = self._record(self.session.get(f"{self.base_url}/api/plan/", timeout=15))
+        resp.raise_for_status()
+        return resp.json()
+
     def whoami(self) -> dict:
         resp = self._record(self.session.get(f"{self.base_url}/api/whoami/", timeout=15))
         resp.raise_for_status()

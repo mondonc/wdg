@@ -1,9 +1,7 @@
-import sys
-
 import click
 import requests
 
-from wg_client import api, auth, config, keygen, pqtls, tunnel
+from wg_client import api, auth, config, keygen, plan, pqtls, tunnel
 from wg_client.i18n import _
 
 
@@ -49,8 +47,7 @@ def login():
         click.echo(_("Groups: (none)"))
 
 
-@cli.command(help=_("Authenticate and bring up the WireGuard tunnel."))
-def connect():
+def _connect():
     cfg = config.load()
     server = _require_setting(cfg, "server")
     require_pq = bool(cfg.get("require_pq", False))
@@ -74,14 +71,14 @@ def connect():
     click.echo(_("Authenticating..."))
     token = auth.get_token(server)
 
-    # register + fetch config
+    # register + fetch the multi-tunnel plan
     client = api.WireGuardAPI(server, token)
     try:
         click.echo(_("Registering peer..."))
         client.register_peer(public_key)
 
-        click.echo(_("Fetching configuration..."))
-        conf = client.get_config()
+        click.echo(_("Fetching tunnel plan..."))
+        tunnel_plan = client.get_plan()
     except requests.HTTPError as exc:
         if exc.response is not None and exc.response.status_code == 421:
             raise click.ClickException(
@@ -90,33 +87,79 @@ def connect():
             )
         raise click.ClickException(str(exc))
 
-    # verify the channel that delivered the PSK really was post-quantum
+    # verify the channel that delivered the PSKs really was post-quantum
     try:
         pqtls.verify_group(client.last_headers, require_pq)
     except pqtls.PostQuantumUnavailable as exc:
         raise click.ClickException(str(exc))
 
-    # inject private key (the server never sees it)
-    conf = conf.replace("__PRIVATE_KEY__", private_key)
+    # bring up every planned tunnel, failing over between instances
+    try:
+        states = plan.connect_plan(tunnel_plan, private_key)
+    except plan.TunnelError as exc:
+        raise click.ClickException(str(exc))
+    config.save_tunnels(states)
+    for state in states:
+        click.echo(
+            _("✓ {service} up via {gateway} ({iface}: {ips}).").format(
+                service=state["service"], gateway=state["gateway"],
+                iface=state["iface"], ips=", ".join(state["allowed_ips"]),
+            )
+        )
 
-    # up
-    click.echo(_("Bringing up tunnel..."))
-    tunnel.connect(conf)
-    click.echo(_("✓ Tunnel up."))
+
+def _disconnect():
+    states = config.load_tunnels()
+    if not states:
+        click.echo(_("○ No tunnel recorded."))
+        return
+    for iface in plan.disconnect_all(states):
+        click.echo(_("✓ {iface} down.").format(iface=iface))
+    config.clear_tunnels()
 
 
-@cli.command(help=_("Bring down the WireGuard tunnel."))
+@cli.command(help=_("Authenticate and bring up every planned WireGuard tunnel."))
+def connect():
+    _connect()
+
+
+@cli.command(help=_("Bring down the WireGuard tunnels."))
 def disconnect():
-    tunnel.disconnect()
-    click.echo(_("✓ Tunnel down."))
+    _disconnect()
 
 
-@cli.command(help=_("Show tunnel status."))
+@cli.command(help=_("Tear down and re-establish every tunnel (fresh plan)."))
+def reconnect():
+    _disconnect()
+    _connect()
+
+
+@cli.command(help=_("Show the status of each tunnel."))
 def status():
-    if tunnel.status():
-        click.echo(_("● Tunnel up."))
-    else:
+    states = config.load_tunnels()
+    if not states:
         click.echo(_("○ Tunnel down."))
+        return
+    for state in states:
+        if tunnel.is_up(state["iface"]):
+            age = tunnel.handshake_age(state["iface"])
+            detail = (
+                _("handshake {age}s ago").format(age=int(age))
+                if age is not None
+                else _("no handshake data")
+            )
+            click.echo(
+                _("● {service} via {gateway} ({iface}) — {detail}").format(
+                    service=state["service"], gateway=state["gateway"],
+                    iface=state["iface"], detail=detail,
+                )
+            )
+        else:
+            click.echo(
+                _("○ {service} ({iface}) is down.").format(
+                    service=state["service"], iface=state["iface"]
+                )
+            )
 
 
 @cli.command(help=_("Remove saved tokens (forces re-authentication)."))

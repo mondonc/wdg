@@ -35,3 +35,26 @@ def get_private_key() -> str | None:
 
 def set_private_key(key: str):
     keyring.set_password(KEYRING_SERVICE, KEYRING_PRIVATE_KEY, key)
+
+
+# --- Runtime state: which tunnels are currently up ---------------------------
+
+def _state_path() -> Path:
+    return _config_path().parent / "tunnels.json"
+
+
+def load_tunnels() -> list[dict]:
+    path = _state_path()
+    if not path.exists():
+        return []
+    return json.loads(path.read_text())
+
+
+def save_tunnels(states: list[dict]):
+    path = _state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(states, indent=2))
+
+
+def clear_tunnels():
+    _state_path().unlink(missing_ok=True)

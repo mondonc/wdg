@@ -50,7 +50,7 @@ def main() -> int:
     s = api(login_as("alice"))
     reg = s.post(f"{CONTROL_PLANE}/api/peers/register/", json={"public_key": fake_wg_key()}, timeout=15)
     assert reg.status_code == 200, (reg.status_code, reg.text)
-    assert sorted(d["gateway"] for d in reg.json()["devices"]) == ["gw-a", "gw-b"], reg.json()
+    assert sorted(d["gateway"] for d in reg.json()["devices"]) == ["gw-a", "gw-a2", "gw-b"], reg.json()
     conf = s.get(f"{CONTROL_PLANE}/api/config/", timeout=15).text
     assert "PrivateKey = __PRIVATE_KEY__" in conf
     assert "Endpoint = gw-a:51820" in conf

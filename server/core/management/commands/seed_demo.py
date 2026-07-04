@@ -27,7 +27,10 @@ SERVICES = [
 GATEWAYS = [
     # name, service, site, endpoint, tunnel_subnet, sync_token
     # public_key is left blank: the gateway agent self-reports it at sync time.
+    # gw-a2 is the site-b instance of the "gw-a" service: same legs, same
+    # relay link — the failover instance clients fall back to.
     ("gw-a", "gw-a", "site-a", "gw-a:51820", "10.10.0.0/24", "gw-a-sync-secret"),
+    ("gw-a2", "gw-a", "site-b", "gw-a2:51820", "10.10.3.0/24", "gw-a2-sync-secret"),
     ("gw-b", "gw-b", "site-b", "gw-b:51820", "10.10.1.0/24", "gw-b-sync-secret"),
     ("gw-dc", "dc-access", "site-a", "gw-dc:51820", "10.10.2.0/24", "gw-dc-sync-secret"),
 ]
@@ -62,13 +65,16 @@ GROUPS = [
 # Which exit networks each gateway has a direct leg into.
 GATEWAY_NETWORKS = {
     "gw-a": ["net-common", "net-lab-a"],
+    "gw-a2": ["net-common", "net-lab-a"],
     "gw-b": ["net-common", "net-lab-b"],
     "gw-dc": ["net-dc"],
 }
 
-# from gateway -> to gateway (directed relay links)
+# from gateway -> to gateway (directed relay links). Both instances of the
+# gw-a service relay to the DC, so failover preserves DC reachability.
 RELAY_LINKS = [
     ("gw-a", "gw-dc"),
+    ("gw-a2", "gw-dc"),
 ]
 
 
