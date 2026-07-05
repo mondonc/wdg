@@ -7,6 +7,10 @@
 
 \definecolor{wdgred}{HTML}{88171A}
 
+% Opaque background: the logo must stay readable on dark pages (GitHub
+% dark mode, admin dark theme), so white is baked into the SVG/PNG.
+\pagecolor{white}
+
 \newfontfamily\Comfortaa{Comfortaa}[
   Path = ./ ,
   UprightFont = Comfortaa-Regular.ttf ,
@@ -27,7 +31,8 @@
 \begin{tikzpicture}[
     gw/.style    ={draw=wdgred, text=wdgred!45, line width=0.6pt, rounded corners=7pt,
                    fill=white, minimum width=1.7cm, minimum height=0.66cm},
-    wgarrow/.style={draw=wdgred, line width=0.9pt, dashed, -{Stealth[length=1.7mm]}},
+    wgarrow/.style={draw=wdgred!40, line width=0.9pt, dashed,
+                    -{Stealth[length=1.7mm, color=wdgred]}},
     wdg/.style   ={draw=wdgred, line width=1.2pt, rounded corners=4pt, fill=white,
                    text=wdgred, align=center, inner sep=7pt,
                    minimum width=4.9cm, minimum height=0.95cm},
@@ -69,14 +74,21 @@
   \node[node2] (c6) at (1.10,0.45){};
   \node[node2] (c7) at (0.15,-0.10){};
 
-  % ---- exits (irregular, far right) ----
+  % ---- exits (irregular, far right): networks (dots) or relay gateways ----
+  % NB: attach points are inverted vs labels: R4 = gw1 ... R1 = gw4.
   \node[node2] (e1) at (9.20,2.50){};
-  \node[node2] (e2) at (9.35,1.60){};
-  \node[node2] (e3) at (9.15,0.70){};
-  \node[node2] (e4) at (9.30,-0.10){};
+  \node[node2] (e2) at (9.35,1.50){};
+  \node[node2] (e3) at (10.75,2.10){};
+  \node[node2] (e4) at (9.00,0.20){};
+  \node[node2] (e5) at (10.00,0.20){};
+  \node[gw]    (relay)  at (7.40,0.60){\footnotesize relay};
+  \node[gw]    (relay2) at (9.65,1.00){\footnotesize relay};
+  \node[gw]    (relay3) at (7.45,2.12){\footnotesize relay};
 
-  % control plane
-  \foreach \c in {c1,c2,c3,c4,c5,c6,c7}{ \draw[ctrl] (\c) -- (wdg); }
+  % control plane; the red chevron against each client marks the return leg
+  \foreach \c in {c1,c2,c3,c4,c5,c6,c7}{
+    \draw[ctrl, {Stealth[length=1.5mm, color=wdgred]}-{Stealth[length=1.5mm]}]
+        (\c) -- (wdg); }
 
   % data plane: clients -> different gateways (encrypted)
   \draw[data] (c1) -- (L4);
@@ -90,13 +102,23 @@
   \draw[data] (c6) -- (L1);
   \draw[data] (c7) -- (L1);
 
-  % exits: different gateways -> sorties
-  \draw[exit] (R4) -- (e1);
-  \draw[exit] (R4) -- (e2);
-  \draw[exit] (R3) -- (e2);
-  \draw[exit] (R3) -- (e3);
-  \draw[exit] (R2) -- (e3);
-  \draw[exit] (R1) -- (e4);
+  % exits: direct to a network, through one relay, or through two
+  \draw[data] (R4) -- (relay3.west);     % gw1 -> relay3 -> e1, e2
+  % start on the straight part of the east edge: the rounded corners make
+  % TikZ's computed border point float off the visible outline
+  \draw[exit] (relay3.east) -- (e1);
+  \draw[exit] ([yshift=-3pt]relay3.east) -- (e2);
+  \draw[exit] (R3) -- (e2);              % gw2 -> e2 (direct)
+  \draw[exit] (R2) -- (e3);              % gw3 -> e3 (direct)
+  \draw[data] (R1) -- (relay.west);      % gw4 -> relay -> e4
+  \draw[exit] (relay.east) -- (e4);
+  \draw[data] (relay) -- (relay2);       %        relay -> relay2 -> e5
+  \draw[exit] (relay2) -- (e5);
+
+  % the relays are driven by the control plane like any gateway
+  \draw[wgarrow] (7.45,2.75) -- (relay3.north);
+  \draw[wgarrow] (6.20,2.77) to[out=-92,in=120] ([xshift=-12pt]relay.north);
+  \draw[wgarrow] (wdg.east) to[out=-20,in=80] (relay2.north);
 
   % padlock over the encrypted mesh
   \fill[white] (2.7,1.42) circle (0.34);
