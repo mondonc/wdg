@@ -12,7 +12,7 @@ IMAGES   := control-plane gateway nginx-pq
 COMPOSE  := docker compose -f deploy/docker-compose.yml
 DOC_DIR  := docs/generated
 
-.PHONY: help build push up seed test e2e doc logo clean
+.PHONY: help build push up seed test e2e doc doc-scenarios logo clean
 
 help: ## List available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -52,6 +52,35 @@ doc: ## Generate the network plan from the database (PDF/SVG diagram + Markdown 
 		dot -Tsvg topology.dot -o topology.svg && \
 		dot -Tpng -Gdpi=110 topology.dot -o topology.png"
 	@echo "→ $(DOC_DIR)/topology.{pdf,svg,png,md}"
+
+doc-scenarios: ## Sans-WDG / avec-WDG comparison diagrams (replaces then restores the demo topology; enrolled devices are dropped)
+	@mkdir -p $(DOC_DIR)
+	# The demo topology is restored by the trap even if a step fails: the
+	# database must never be left on a presentation scenario.
+	sh -c 'trap "$(COMPOSE) exec -T control-plane python manage.py seed_scenario demo" EXIT; set -e; \
+		$(COMPOSE) exec -T control-plane python manage.py seed_scenario sans-wdg; \
+		$(COMPOSE) exec -T control-plane python manage.py topology_export --format dot \
+			--title "Cas 1 — accès actuels sans WDG : silos DGTW / VPN / bastions" > $(DOC_DIR)/scenario-sans-wdg.dot; \
+		$(COMPOSE) exec -T control-plane python manage.py topology_export --format markdown \
+			--title "Cas 1 — accès actuels sans WDG" > $(DOC_DIR)/scenario-sans-wdg.md; \
+		$(COMPOSE) exec -T control-plane python manage.py seed_scenario avec-wdg; \
+		$(COMPOSE) exec -T control-plane python manage.py topology_export --format dot \
+			--title "Cas 2 — architecture cible WDG : entrée unifiée, relais admin, failover par centre" > $(DOC_DIR)/scenario-avec-wdg.dot; \
+		$(COMPOSE) exec -T control-plane python manage.py topology_export --format markdown \
+			--title "Cas 2 — architecture cible WDG" > $(DOC_DIR)/scenario-avec-wdg.md'
+	docker build -q -t wdg-doc deploy/doc >/dev/null
+	docker run --rm -v $(abspath $(DOC_DIR)):/work -w /work wdg-doc sh -c "\
+		for s in sans-wdg avec-wdg; do \
+			dot -Tpdf scenario-\$$s.dot -o scenario-\$$s.pdf && \
+			dot -Tsvg scenario-\$$s.dot -o scenario-\$$s.svg && \
+			dot -Tpng -Gdpi=110 scenario-\$$s.dot -o scenario-\$$s.png; \
+		done"
+	# Keep the committed reference copies in sync with the generated output.
+	for s in sans-wdg avec-wdg; do \
+		cp $(DOC_DIR)/scenario-$$s.png $(DOC_DIR)/scenario-$$s.svg \
+		   $(DOC_DIR)/scenario-$$s.md docs/scenarios/; \
+	done
+	@echo "→ $(DOC_DIR)/scenario-{sans,avec}-wdg.{pdf,svg,png,md} (+ docs/scenarios/)"
 
 logo: ## Rebuild logo assets from logo/wdg-logo.tex (needs lualatex + pdftocairo)
 	cd logo && lualatex -interaction=nonstopmode wdg-logo.tex >/dev/null

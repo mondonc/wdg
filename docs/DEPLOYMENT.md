@@ -64,7 +64,36 @@ All settings come from the environment (see `server/wdg_server/settings.py`):
 | `WDG_CAS_SITE_ATTRIBUTE` | CAS attribute carrying the user's home site/centre (default `ou`) |
 | `WDG_TOKEN_MAX_AGE` | WDG token lifetime, seconds |
 | `WDG_AUTH_CODE_MAX_AGE` | lifetime of the one-time login code, seconds (default 60) |
+| `WDG_PLANES` | configuration planes served by this instance: `external`, `internal`, or both (default) — see below |
 | `POSTGRES_*` | database connection |
+
+### Configuration planes (`WDG_PLANES`)
+
+The control plane exposes two API surfaces, and each instance declares which
+one(s) it serves; the same image and database back every role:
+
+| Plane | Exposure | Serves |
+|---|---|---|
+| `external` | published to clients (behind nginx-pq) | CAS auth (`/auth/cas/*`, `/api/whoami/`) + client provisioning (`/api/peers/register/`, `/api/config/`, `/api/plan/`, `/api/configs/`) |
+| `internal` | internal networks only | **the single Django admin** (`/admin/`) + gateway sync (`/api/gateways/sync/`) |
+
+`/healthz` is served on every plane. The default (`external,internal`) keeps
+today's single-instance behaviour (dev, small deployments). To split:
+
+```yaml
+control-plane-ext:            # published through nginx-pq
+  environment: { WDG_PLANES: external, ... }
+control-plane-int:            # reachable by gateways and admins only
+  environment: { WDG_PLANES: internal, ... }
+```
+
+The admin interface therefore exists in exactly one place, unreachable from
+the outside even if the reverse proxy is misconfigured — the external
+instance simply has no `/admin/` (nor sync) routes.
+
+An optional *upstream* ("amont") tier — making client configuration available
+one network further down — is an additional `WDG_PLANES=external` instance
+published on that tier, pointed at the same database (or a replica).
 
 ## Gateways
 

@@ -28,6 +28,21 @@ if not SECRET_KEY:
     SECRET_KEY = "dev-insecure-change-me"
 ALLOWED_HOSTS = _env_list("WDG_ALLOWED_HOSTS", "*") or ["*"]
 
+# --- Configuration planes ---------------------------------------------------
+# Which API surfaces this instance serves (see wdg_server.urls):
+#   external  client-facing plane (CAS auth + provisioning), exposed outside
+#   internal  Django admin + gateway sync API, internal networks only
+# One instance may serve both (default, dev) or a single plane, so the same
+# image can be deployed once per exposure. /healthz is served on every plane.
+WDG_PLANES = _env_list("WDG_PLANES", "external,internal")
+if not WDG_PLANES:
+    # An empty value would boot a healthz-only instance that monitoring
+    # reports as healthy while every real route 404s — refuse to start.
+    raise ImproperlyConfigured("WDG_PLANES must list at least one of: external, internal")
+_unknown_planes = set(WDG_PLANES) - {"external", "internal"}
+if _unknown_planes:
+    raise ImproperlyConfigured(f"WDG_PLANES: unknown plane(s) {sorted(_unknown_planes)}")
+
 # --- CAS / SSO -------------------------------------------------------------
 # Base URL of the Apereo CAS server (override via WDG_CAS_BASE_URL).
 CAS_BASE_URL = os.environ.get("WDG_CAS_BASE_URL", "https://cas.example.org").rstrip("/")
@@ -110,5 +125,9 @@ USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Behind the PQ reverse proxy (see M5), trust the forwarded scheme.
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Behind the PQ reverse proxy (see M5), trust the forwarded scheme — but only
+# when this instance serves the external plane. A purely internal instance is
+# not behind nginx-pq, so the header would be client-spoofable there.
+SECURE_PROXY_SSL_HEADER = (
+    ("HTTP_X_FORWARDED_PROTO", "https") if "external" in WDG_PLANES else None
+)

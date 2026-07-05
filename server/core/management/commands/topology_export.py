@@ -25,20 +25,29 @@ def _service_colors() -> dict[int, str]:
     return {s.pk: PALETTE[i % len(PALETTE)] for i, s in enumerate(services)}
 
 
+def _q(text: str) -> str:
+    """Escape for a double-quoted DOT string literal (quotes, backslashes)."""
+    return str(text).replace("\\", "\\\\").replace('"', '\\"')
+
+
 def _gateway_label(g: Gateway) -> str:
     lines = [g.name, f"{g.endpoint}", f"tunnel {g.tunnel_subnet}"]
     if not g.is_active:
         lines.append("(inactive)")
-    return "\\n".join(lines)
+    return "\\n".join(_q(line) for line in lines)
 
 
-def render_dot() -> str:
+DEFAULT_TITLE = "WDG network plan (generated from the control-plane database)"
+
+
+def render_dot(title: str | None = None) -> str:
+    title = DEFAULT_TITLE if title is None else title
     colors = _service_colors()
     out = [
         "digraph wdg {",
         '  rankdir=LR;',
         '  fontname="Helvetica"; labelloc="t";',
-        '  label="WDG network plan (generated from the control-plane database)";',
+        f'  label="{_q(title)}";',
         '  node [fontname="Helvetica", fontsize=10, shape=box, style="rounded,filled"];',
         '  edge [fontname="Helvetica", fontsize=9];',
         "",
@@ -58,7 +67,7 @@ def render_dot() -> str:
 
     for site in Site.objects.all():
         out.append(f"  subgraph cluster_site_{site.pk} {{")
-        out.append(f'    label="{site.name}"; style="rounded"; color="#999999";')
+        out.append(f'    label="{_q(site.name)}"; style="rounded"; color="#999999";')
         for g in site.gateways.select_related("service"):
             out.append(gateway_node(g, "    "))
         out.append("  }")
@@ -68,9 +77,9 @@ def render_dot() -> str:
 
     out.append("")
     for n in Network.objects.all():
-        desc = f"\\n{n.description}" if n.description else ""
+        desc = f"\\n{_q(n.description)}" if n.description else ""
         out.append(
-            f'  net_{n.pk} [label="{n.name}\\n{n.cidr}{desc}", '
+            f'  net_{n.pk} [label="{_q(n.name)}\\n{_q(n.cidr)}{desc}", '
             f'shape=box, fillcolor="#f5f5f5", color="#888888"];'
         )
 
@@ -96,7 +105,7 @@ def render_dot() -> str:
         color = colors[s.pk]
         style = "rounded,filled" + ("" if s.accepts_clients else ",dashed")
         out.append(
-            f'    svc_{s.pk} [label="{s.name}\\n({", ".join(flags)})", '
+            f'    svc_{s.pk} [label="{_q(s.name)}\\n({", ".join(flags)})", '
             f'fillcolor="{color}40", color="{color}", style="{style}"];'
         )
     out += ["  }", "}"]
@@ -109,8 +118,9 @@ def _table(headers: list[str], rows: list[list[str]]) -> list[str]:
     return lines + [""]
 
 
-def render_markdown() -> str:
-    out = ["# WDG network plan", "", "*Generated from the control-plane database.*", ""]
+def render_markdown(title: str | None = None) -> str:
+    title = "WDG network plan" if title is None else title
+    out = [f"# {title}", "", "*Generated from the control-plane database.*", ""]
 
     out.append("## Sites")
     out += _table(
@@ -183,7 +193,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--format", choices=["dot", "markdown"], default="dot")
+        parser.add_argument("--title", help="Diagram/document title override")
 
     def handle(self, *args, **options):
         renderer = render_dot if options["format"] == "dot" else render_markdown
-        self.stdout.write(renderer())
+        self.stdout.write(renderer(options["title"]))
