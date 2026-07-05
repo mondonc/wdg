@@ -16,17 +16,17 @@
 <text text-anchor="middle" x="85.56" y="-535.7" font-family="Helvetica,sans-Serif" font-size="14.00">services</text>
 </g>
 <g id="clust1" class="cluster">
-<title>cluster_site_14</title>
+<title>cluster_site_22</title>
 <path fill="none" stroke="#999999" d="M212.12,-436C212.12,-436 666.24,-436 666.24,-436 672.24,-436 678.24,-442 678.24,-448 678.24,-448 678.24,-575 678.24,-575 678.24,-581 672.24,-587 666.24,-587 666.24,-587 212.12,-587 212.12,-587 206.12,-587 200.12,-581 200.12,-575 200.12,-575 200.12,-448 200.12,-448 200.12,-442 206.12,-436 212.12,-436"/>
 <text text-anchor="middle" x="439.18" y="-569.7" font-family="Helvetica,sans-Serif" font-size="14.00">centre&#45;a</text>
 </g>
 <g id="clust2" class="cluster">
-<title>cluster_site_15</title>
+<title>cluster_site_23</title>
 <path fill="none" stroke="#999999" d="M212.12,-8C212.12,-8 666.24,-8 666.24,-8 672.24,-8 678.24,-14 678.24,-20 678.24,-20 678.24,-147 678.24,-147 678.24,-153 672.24,-159 666.24,-159 666.24,-159 212.12,-159 212.12,-159 206.12,-159 200.12,-153 200.12,-147 200.12,-147 200.12,-20 200.12,-20 200.12,-14 206.12,-8 212.12,-8"/>
 <text text-anchor="middle" x="439.18" y="-141.7" font-family="Helvetica,sans-Serif" font-size="14.00">centre&#45;b</text>
 </g>
 <g id="clust3" class="cluster">
-<title>cluster_site_16</title>
+<title>cluster_site_24</title>
 <path fill="none" stroke="#999999" d="M468.12,-223C468.12,-223 668.87,-223 668.87,-223 674.87,-223 680.87,-229 680.87,-235 680.87,-235 680.87,-298 680.87,-298 680.87,-304 674.87,-310 668.87,-310 668.87,-310 468.12,-310 468.12,-310 462.12,-310 456.12,-304 456.12,-298 456.12,-298 456.12,-235 456.12,-235 456.12,-229 462.12,-223 468.12,-223"/>
 <text text-anchor="middle" x="568.49" y="-292.7" font-family="Helvetica,sans-Serif" font-size="14.00">datacenter</text>
 </g>
@@ -37,233 +37,233 @@
 <text text-anchor="middle" x="85.56" y="-205.25" font-family="Helvetica,sans-Serif" font-size="10.00">clients</text>
 <text text-anchor="middle" x="85.56" y="-192.5" font-family="Helvetica,sans-Serif" font-size="10.00">(standard WireGuard)</text>
 </g>
-<!-- gw_30 -->
+<!-- gw_47 -->
 <g id="node2" class="node">
-<title>gw_30</title>
+<title>gw_47</title>
 <path fill="#f28e2b" fill-opacity="0.250980" stroke="#f28e2b" d="M394.37,-554.12C394.37,-554.12 220.12,-554.12 220.12,-554.12 214.12,-554.12 208.12,-548.12 208.12,-542.12 208.12,-542.12 208.12,-519.88 208.12,-519.88 208.12,-513.88 214.12,-507.88 220.12,-507.88 220.12,-507.88 394.37,-507.88 394.37,-507.88 400.37,-507.88 406.37,-513.88 406.37,-519.88 406.37,-519.88 406.37,-542.12 406.37,-542.12 406.37,-548.12 400.37,-554.12 394.37,-554.12"/>
 <text text-anchor="middle" x="307.24" y="-540.62" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;admins&#45;a</text>
 <text text-anchor="middle" x="307.24" y="-527.88" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;admins&#45;a.vpn.example.org:51820</text>
 <text text-anchor="middle" x="307.24" y="-515.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.11.0/24</text>
 </g>
-<!-- clients&#45;&gt;gw_30 -->
+<!-- clients&#45;&gt;gw_47 -->
 <g id="edge1" class="edge">
-<title>clients&#45;&gt;gw_30</title>
+<title>clients&#45;&gt;gw_47</title>
 <path fill="none" stroke="#777777" stroke-dasharray="1,5" d="M101.59,-225.76C120.42,-256.54 152.49,-312.37 171.12,-364 191.95,-421.72 158.52,-453.88 200.12,-499 200.39,-499.29 200.66,-499.58 200.93,-499.87"/>
 <polygon fill="#777777" stroke="#777777" points="198.59,-502.46 208.4,-506.47 203.22,-497.22 198.59,-502.46"/>
 </g>
-<!-- gw_28 -->
+<!-- gw_45 -->
 <g id="node3" class="node">
-<title>gw_28</title>
+<title>gw_45</title>
 <path fill="#59a14f" fill-opacity="0.250980" stroke="#59a14f" d="M389.49,-490.12C389.49,-490.12 224.99,-490.12 224.99,-490.12 218.99,-490.12 212.99,-484.12 212.99,-478.12 212.99,-478.12 212.99,-455.88 212.99,-455.88 212.99,-449.88 218.99,-443.88 224.99,-443.88 224.99,-443.88 389.49,-443.88 389.49,-443.88 395.49,-443.88 401.49,-449.88 401.49,-455.88 401.49,-455.88 401.49,-478.12 401.49,-478.12 401.49,-484.12 395.49,-490.12 389.49,-490.12"/>
 <text text-anchor="middle" x="307.24" y="-476.62" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;users&#45;a</text>
 <text text-anchor="middle" x="307.24" y="-463.88" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;users&#45;a.vpn.example.org:51820</text>
 <text text-anchor="middle" x="307.24" y="-451.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.10.0/24</text>
 </g>
-<!-- clients&#45;&gt;gw_28 -->
+<!-- clients&#45;&gt;gw_45 -->
 <g id="edge3" class="edge">
-<title>clients&#45;&gt;gw_28</title>
+<title>clients&#45;&gt;gw_45</title>
 <path fill="none" stroke="#777777" stroke-dasharray="1,5" d="M105.67,-225.05C144.85,-272.31 234.35,-380.28 279.36,-434.57"/>
 <polygon fill="#777777" stroke="#777777" points="276.66,-436.8 285.74,-442.27 282.05,-432.33 276.66,-436.8"/>
 </g>
-<!-- gw_31 -->
+<!-- gw_48 -->
 <g id="node5" class="node">
-<title>gw_31</title>
+<title>gw_48</title>
 <path fill="#f28e2b" fill-opacity="0.250980" stroke="#f28e2b" d="M394.37,-62.12C394.37,-62.12 220.12,-62.12 220.12,-62.12 214.12,-62.12 208.12,-56.12 208.12,-50.12 208.12,-50.12 208.12,-27.88 208.12,-27.88 208.12,-21.88 214.12,-15.88 220.12,-15.88 220.12,-15.88 394.37,-15.88 394.37,-15.88 400.37,-15.88 406.37,-21.88 406.37,-27.88 406.37,-27.88 406.37,-50.12 406.37,-50.12 406.37,-56.12 400.37,-62.12 394.37,-62.12"/>
 <text text-anchor="middle" x="307.24" y="-48.62" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;admins&#45;b</text>
 <text text-anchor="middle" x="307.24" y="-35.88" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;admins&#45;b.vpn.example.org:51820</text>
 <text text-anchor="middle" x="307.24" y="-23.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.21.0/24</text>
 </g>
-<!-- clients&#45;&gt;gw_31 -->
+<!-- clients&#45;&gt;gw_48 -->
 <g id="edge2" class="edge">
-<title>clients&#45;&gt;gw_31</title>
+<title>clients&#45;&gt;gw_48</title>
 <path fill="none" stroke="#777777" stroke-dasharray="1,5" d="M101.01,-178.29C120.13,-148.89 156.54,-99.22 200.12,-71 201.76,-69.94 203.43,-68.91 205.14,-67.92"/>
 <polygon fill="#777777" stroke="#777777" points="206.68,-71.06 213.88,-63.28 203.4,-64.88 206.68,-71.06"/>
 </g>
-<!-- gw_29 -->
+<!-- gw_46 -->
 <g id="node6" class="node">
-<title>gw_29</title>
+<title>gw_46</title>
 <path fill="#59a14f" fill-opacity="0.250980" stroke="#59a14f" d="M389.49,-126.12C389.49,-126.12 224.99,-126.12 224.99,-126.12 218.99,-126.12 212.99,-120.12 212.99,-114.12 212.99,-114.12 212.99,-91.88 212.99,-91.88 212.99,-85.88 218.99,-79.88 224.99,-79.88 224.99,-79.88 389.49,-79.88 389.49,-79.88 395.49,-79.88 401.49,-85.88 401.49,-91.88 401.49,-91.88 401.49,-114.12 401.49,-114.12 401.49,-120.12 395.49,-126.12 389.49,-126.12"/>
 <text text-anchor="middle" x="307.24" y="-112.62" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;users&#45;b</text>
 <text text-anchor="middle" x="307.24" y="-99.88" font-family="Helvetica,sans-Serif" font-size="10.00">gw&#45;users&#45;b.vpn.example.org:51820</text>
 <text text-anchor="middle" x="307.24" y="-87.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.20.0/24</text>
 </g>
-<!-- clients&#45;&gt;gw_29 -->
+<!-- clients&#45;&gt;gw_46 -->
 <g id="edge4" class="edge">
-<title>clients&#45;&gt;gw_29</title>
+<title>clients&#45;&gt;gw_46</title>
 <path fill="none" stroke="#777777" stroke-dasharray="1,5" d="M131.81,-181.61C164.17,-167.03 208.11,-147.22 243.8,-131.14"/>
 <polygon fill="#777777" stroke="#777777" points="245.05,-134.42 252.73,-127.12 242.17,-128.03 245.05,-134.42"/>
 </g>
-<!-- gw_32 -->
+<!-- gw_49 -->
 <g id="node4" class="node">
-<title>gw_32</title>
+<title>gw_49</title>
 <path fill="#4e79a7" fill-opacity="0.250980" stroke="#4e79a7" stroke-dasharray="5,2" d="M658.24,-554.12C658.24,-554.12 478.74,-554.12 478.74,-554.12 472.74,-554.12 466.74,-548.12 466.74,-542.12 466.74,-542.12 466.74,-519.88 466.74,-519.88 466.74,-513.88 472.74,-507.88 478.74,-507.88 478.74,-507.88 658.24,-507.88 658.24,-507.88 664.24,-507.88 670.24,-513.88 670.24,-519.88 670.24,-519.88 670.24,-542.12 670.24,-542.12 670.24,-548.12 664.24,-554.12 658.24,-554.12"/>
 <text text-anchor="middle" x="568.49" y="-540.62" font-family="Helvetica,sans-Serif" font-size="10.00">relay&#45;admin&#45;a</text>
 <text text-anchor="middle" x="568.49" y="-527.88" font-family="Helvetica,sans-Serif" font-size="10.00">relay&#45;admin&#45;a.vpn.example.org:51820</text>
 <text text-anchor="middle" x="568.49" y="-515.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.12.0/24</text>
 </g>
-<!-- gw_30&#45;&gt;gw_32 -->
+<!-- gw_47&#45;&gt;gw_49 -->
 <g id="edge14" class="edge">
-<title>gw_30&#45;&gt;gw_32</title>
+<title>gw_47&#45;&gt;gw_49</title>
 <path fill="none" stroke="#e15759" stroke-width="2" d="M406.63,-531C422.11,-531 438.23,-531 454.02,-531"/>
 <polygon fill="#e15759" stroke="#e15759" stroke-width="2" points="453.57,-534.5 463.57,-531 453.57,-527.5 453.57,-534.5"/>
 <text text-anchor="middle" x="435.24" y="-533.7" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#e15759">relay</text>
 </g>
-<!-- gw_34 -->
+<!-- gw_51 -->
 <g id="node8" class="node">
-<title>gw_34</title>
+<title>gw_51</title>
 <path fill="#4e79a7" fill-opacity="0.250980" stroke="#4e79a7" stroke-dasharray="5,2" d="M660.87,-277.12C660.87,-277.12 476.12,-277.12 476.12,-277.12 470.12,-277.12 464.12,-271.12 464.12,-265.12 464.12,-265.12 464.12,-242.88 464.12,-242.88 464.12,-236.88 470.12,-230.88 476.12,-230.88 476.12,-230.88 660.87,-230.88 660.87,-230.88 666.87,-230.88 672.87,-236.88 672.87,-242.88 672.87,-242.88 672.87,-265.12 672.87,-265.12 672.87,-271.12 666.87,-277.12 660.87,-277.12"/>
 <text text-anchor="middle" x="568.49" y="-263.62" font-family="Helvetica,sans-Serif" font-size="10.00">relay&#45;admin&#45;dc</text>
 <text text-anchor="middle" x="568.49" y="-250.88" font-family="Helvetica,sans-Serif" font-size="10.00">relay&#45;admin&#45;dc.vpn.example.org:51820</text>
 <text text-anchor="middle" x="568.49" y="-238.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.40.0/24</text>
 </g>
-<!-- gw_30&#45;&gt;gw_34 -->
+<!-- gw_47&#45;&gt;gw_51 -->
 <g id="edge15" class="edge">
-<title>gw_30&#45;&gt;gw_34</title>
+<title>gw_47&#45;&gt;gw_51</title>
 <path fill="none" stroke="#e15759" stroke-width="2" d="M397.56,-507.58C400.76,-505.01 403.72,-502.16 406.37,-499 443.6,-454.53 406.68,-424.98 424.37,-369.75 433.66,-340.74 434.33,-330.29 456.12,-309 466.32,-299.03 478.68,-290.54 491.41,-283.44"/>
 <polygon fill="#e15759" stroke="#e15759" stroke-width="2" points="492.73,-286.69 499.96,-278.95 489.48,-280.5 492.73,-286.69"/>
 <text text-anchor="middle" x="435.24" y="-371.7" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#e15759">relay</text>
 </g>
-<!-- net_27 -->
+<!-- net_42 -->
 <g id="node12" class="node">
-<title>net_27</title>
+<title>net_42</title>
 <path fill="#f5f5f5" stroke="#888888" d="M636.12,-364.12C636.12,-364.12 500.87,-364.12 500.87,-364.12 494.87,-364.12 488.87,-358.12 488.87,-352.12 488.87,-352.12 488.87,-329.88 488.87,-329.88 488.87,-323.88 494.87,-317.88 500.87,-317.88 500.87,-317.88 636.12,-317.88 636.12,-317.88 642.12,-317.88 648.12,-323.88 648.12,-329.88 648.12,-329.88 648.12,-352.12 648.12,-352.12 648.12,-358.12 642.12,-364.12 636.12,-364.12"/>
 <text text-anchor="middle" x="568.49" y="-350.62" font-family="Helvetica,sans-Serif" font-size="10.00">vlan&#45;metier</text>
 <text text-anchor="middle" x="568.49" y="-337.88" font-family="Helvetica,sans-Serif" font-size="10.00">10.30.0.0/23</text>
 <text text-anchor="middle" x="568.49" y="-325.12" font-family="Helvetica,sans-Serif" font-size="10.00">Applications métier (partagé)</text>
 </g>
-<!-- gw_30&#45;&gt;net_27 -->
+<!-- gw_47&#45;&gt;net_42 -->
 <g id="edge5" class="edge">
-<title>gw_30&#45;&gt;net_27</title>
+<title>gw_47&#45;&gt;net_42</title>
 <path fill="none" stroke="#888888" d="M395.32,-507.65C399.26,-505.07 402.98,-502.19 406.37,-499 450.22,-457.74 411.55,-413.48 456.12,-373 462.61,-367.1 470.12,-362.29 478.12,-358.36"/>
 <polygon fill="#888888" stroke="#888888" points="479.32,-361.65 487.08,-354.44 476.51,-355.24 479.32,-361.65"/>
 </g>
-<!-- gw_28&#45;&gt;net_27 -->
+<!-- gw_45&#45;&gt;net_42 -->
 <g id="edge7" class="edge">
-<title>gw_28&#45;&gt;net_27</title>
+<title>gw_45&#45;&gt;net_42</title>
 <path fill="none" stroke="#888888" d="M325.86,-443.51C346.43,-418.02 382.96,-378.35 424.37,-359 440.72,-351.36 459.2,-346.6 477.32,-343.69"/>
 <polygon fill="#888888" stroke="#888888" points="477.62,-347.19 487.03,-342.33 476.64,-340.25 477.62,-347.19"/>
 </g>
-<!-- net_25 -->
+<!-- net_40 -->
 <g id="node13" class="node">
-<title>net_25</title>
+<title>net_40</title>
 <path fill="#f5f5f5" stroke="#888888" d="M628.62,-428.12C628.62,-428.12 508.37,-428.12 508.37,-428.12 502.37,-428.12 496.37,-422.12 496.37,-416.12 496.37,-416.12 496.37,-393.88 496.37,-393.88 496.37,-387.88 502.37,-381.88 508.37,-381.88 508.37,-381.88 628.62,-381.88 628.62,-381.88 634.62,-381.88 640.62,-387.88 640.62,-393.88 640.62,-393.88 640.62,-416.12 640.62,-416.12 640.62,-422.12 634.62,-428.12 628.62,-428.12"/>
 <text text-anchor="middle" x="568.49" y="-414.62" font-family="Helvetica,sans-Serif" font-size="10.00">vlan&#45;users&#45;a</text>
 <text text-anchor="middle" x="568.49" y="-401.88" font-family="Helvetica,sans-Serif" font-size="10.00">10.20.10.0/24</text>
 <text text-anchor="middle" x="568.49" y="-389.12" font-family="Helvetica,sans-Serif" font-size="10.00">VLAN utilisateurs centre A</text>
 </g>
-<!-- gw_28&#45;&gt;net_25 -->
+<!-- gw_45&#45;&gt;net_40 -->
 <g id="edge8" class="edge">
-<title>gw_28&#45;&gt;net_25</title>
+<title>gw_45&#45;&gt;net_40</title>
 <path fill="none" stroke="#888888" d="M401.84,-444.62C429,-438.12 458.45,-431.08 484.88,-424.76"/>
 <polygon fill="#888888" stroke="#888888" points="485.63,-428.18 494.54,-422.45 484,-421.37 485.63,-428.18"/>
 </g>
-<!-- net_28 -->
+<!-- net_43 -->
 <g id="node9" class="node">
-<title>net_28</title>
+<title>net_43</title>
 <path fill="#f5f5f5" stroke="#888888" d="M824.12,-554.12C824.12,-554.12 727.87,-554.12 727.87,-554.12 721.87,-554.12 715.87,-548.12 715.87,-542.12 715.87,-542.12 715.87,-519.88 715.87,-519.88 715.87,-513.88 721.87,-507.88 727.87,-507.88 727.87,-507.88 824.12,-507.88 824.12,-507.88 830.12,-507.88 836.12,-513.88 836.12,-519.88 836.12,-519.88 836.12,-542.12 836.12,-542.12 836.12,-548.12 830.12,-554.12 824.12,-554.12"/>
 <text text-anchor="middle" x="775.99" y="-540.62" font-family="Helvetica,sans-Serif" font-size="10.00">vlan&#45;admin&#45;a</text>
 <text text-anchor="middle" x="775.99" y="-527.88" font-family="Helvetica,sans-Serif" font-size="10.00">10.40.10.0/24</text>
 <text text-anchor="middle" x="775.99" y="-515.12" font-family="Helvetica,sans-Serif" font-size="10.00">VLAN admin centre A</text>
 </g>
-<!-- gw_32&#45;&gt;net_28 -->
+<!-- gw_49&#45;&gt;net_43 -->
 <g id="edge11" class="edge">
-<title>gw_32&#45;&gt;net_28</title>
+<title>gw_49&#45;&gt;net_43</title>
 <path fill="none" stroke="#888888" d="M670.74,-531C681.97,-531 693.23,-531 703.98,-531"/>
 <polygon fill="#888888" stroke="#888888" points="703.9,-534.5 713.9,-531 703.9,-527.5 703.9,-534.5"/>
 </g>
-<!-- gw_33 -->
+<!-- gw_50 -->
 <g id="node7" class="node">
-<title>gw_33</title>
+<title>gw_50</title>
 <path fill="#4e79a7" fill-opacity="0.250980" stroke="#4e79a7" stroke-dasharray="5,2" d="M658.24,-62.12C658.24,-62.12 478.74,-62.12 478.74,-62.12 472.74,-62.12 466.74,-56.12 466.74,-50.12 466.74,-50.12 466.74,-27.88 466.74,-27.88 466.74,-21.88 472.74,-15.88 478.74,-15.88 478.74,-15.88 658.24,-15.88 658.24,-15.88 664.24,-15.88 670.24,-21.88 670.24,-27.88 670.24,-27.88 670.24,-50.12 670.24,-50.12 670.24,-56.12 664.24,-62.12 658.24,-62.12"/>
 <text text-anchor="middle" x="568.49" y="-48.62" font-family="Helvetica,sans-Serif" font-size="10.00">relay&#45;admin&#45;b</text>
 <text text-anchor="middle" x="568.49" y="-35.88" font-family="Helvetica,sans-Serif" font-size="10.00">relay&#45;admin&#45;b.vpn.example.org:51820</text>
 <text text-anchor="middle" x="568.49" y="-23.12" font-family="Helvetica,sans-Serif" font-size="10.00">tunnel 10.10.22.0/24</text>
 </g>
-<!-- gw_31&#45;&gt;gw_33 -->
+<!-- gw_48&#45;&gt;gw_50 -->
 <g id="edge16" class="edge">
-<title>gw_31&#45;&gt;gw_33</title>
+<title>gw_48&#45;&gt;gw_50</title>
 <path fill="none" stroke="#e15759" stroke-width="2" d="M406.63,-39C422.11,-39 438.23,-39 454.02,-39"/>
 <polygon fill="#e15759" stroke="#e15759" stroke-width="2" points="453.57,-42.5 463.57,-39 453.57,-35.5 453.57,-42.5"/>
 <text text-anchor="middle" x="435.24" y="-41.7" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#e15759">relay</text>
 </g>
-<!-- gw_31&#45;&gt;gw_34 -->
+<!-- gw_48&#45;&gt;gw_51 -->
 <g id="edge17" class="edge">
-<title>gw_31&#45;&gt;gw_34</title>
+<title>gw_48&#45;&gt;gw_51</title>
 <path fill="none" stroke="#e15759" stroke-width="2" d="M396,-62.42C399.71,-64.99 403.2,-67.84 406.37,-71 456.41,-120.89 405.2,-173.01 456.12,-222 456.32,-222.2 456.53,-222.39 456.73,-222.58"/>
 <polygon fill="#e15759" stroke="#e15759" stroke-width="2" points="454.33,-225.14 464.32,-228.64 458.69,-219.67 454.33,-225.14"/>
 <text text-anchor="middle" x="435.24" y="-212.7" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#e15759">relay</text>
 </g>
-<!-- gw_31&#45;&gt;net_27 -->
+<!-- gw_48&#45;&gt;net_42 -->
 <g id="edge6" class="edge">
-<title>gw_31&#45;&gt;net_27</title>
+<title>gw_48&#45;&gt;net_42</title>
 <path fill="none" stroke="#888888" d="M398.17,-62.6C401.16,-65.12 403.92,-67.91 406.37,-71 434.95,-106.98 406.55,-234.64 424.37,-277 426.47,-281.99 451.5,-311.17 456.12,-314 462.87,-318.13 470.2,-321.63 477.78,-324.6"/>
 <polygon fill="#888888" stroke="#888888" points="476.61,-327.9 487.2,-327.94 478.95,-321.3 476.61,-327.9"/>
 </g>
-<!-- gw_29&#45;&gt;net_27 -->
+<!-- gw_46&#45;&gt;net_42 -->
 <g id="edge9" class="edge">
-<title>gw_29&#45;&gt;net_27</title>
+<title>gw_46&#45;&gt;net_42</title>
 <path fill="none" stroke="#888888" d="M315.4,-126.31C329.42,-168.12 364.48,-255.96 424.37,-304 439.67,-316.27 458.59,-324.52 477.61,-330.04"/>
 <polygon fill="#888888" stroke="#888888" points="476.45,-333.35 487.01,-332.53 478.24,-326.59 476.45,-333.35"/>
 </g>
-<!-- net_26 -->
+<!-- net_41 -->
 <g id="node14" class="node">
-<title>net_26</title>
+<title>net_41</title>
 <path fill="#f5f5f5" stroke="#888888" d="M628.62,-213.12C628.62,-213.12 508.37,-213.12 508.37,-213.12 502.37,-213.12 496.37,-207.12 496.37,-201.12 496.37,-201.12 496.37,-178.88 496.37,-178.88 496.37,-172.88 502.37,-166.88 508.37,-166.88 508.37,-166.88 628.62,-166.88 628.62,-166.88 634.62,-166.88 640.62,-172.88 640.62,-178.88 640.62,-178.88 640.62,-201.12 640.62,-201.12 640.62,-207.12 634.62,-213.12 628.62,-213.12"/>
 <text text-anchor="middle" x="568.49" y="-199.62" font-family="Helvetica,sans-Serif" font-size="10.00">vlan&#45;users&#45;b</text>
 <text text-anchor="middle" x="568.49" y="-186.88" font-family="Helvetica,sans-Serif" font-size="10.00">10.20.20.0/24</text>
 <text text-anchor="middle" x="568.49" y="-174.12" font-family="Helvetica,sans-Serif" font-size="10.00">VLAN utilisateurs centre B</text>
 </g>
-<!-- gw_29&#45;&gt;net_26 -->
+<!-- gw_46&#45;&gt;net_41 -->
 <g id="edge10" class="edge">
-<title>gw_29&#45;&gt;net_26</title>
+<title>gw_46&#45;&gt;net_41</title>
 <path fill="none" stroke="#888888" d="M360.93,-126.59C388.85,-138.52 423.95,-152.64 456.12,-163 465.41,-165.99 475.22,-168.83 485.03,-171.46"/>
 <polygon fill="#888888" stroke="#888888" points="484.03,-174.82 494.59,-173.96 485.8,-168.04 484.03,-174.82"/>
 </g>
-<!-- net_29 -->
+<!-- net_44 -->
 <g id="node10" class="node">
-<title>net_29</title>
+<title>net_44</title>
 <path fill="#f5f5f5" stroke="#888888" d="M824.12,-62.12C824.12,-62.12 727.87,-62.12 727.87,-62.12 721.87,-62.12 715.87,-56.12 715.87,-50.12 715.87,-50.12 715.87,-27.88 715.87,-27.88 715.87,-21.88 721.87,-15.88 727.87,-15.88 727.87,-15.88 824.12,-15.88 824.12,-15.88 830.12,-15.88 836.12,-21.88 836.12,-27.88 836.12,-27.88 836.12,-50.12 836.12,-50.12 836.12,-56.12 830.12,-62.12 824.12,-62.12"/>
 <text text-anchor="middle" x="775.99" y="-48.62" font-family="Helvetica,sans-Serif" font-size="10.00">vlan&#45;admin&#45;b</text>
 <text text-anchor="middle" x="775.99" y="-35.88" font-family="Helvetica,sans-Serif" font-size="10.00">10.40.20.0/24</text>
 <text text-anchor="middle" x="775.99" y="-23.12" font-family="Helvetica,sans-Serif" font-size="10.00">VLAN admin centre B</text>
 </g>
-<!-- gw_33&#45;&gt;net_29 -->
+<!-- gw_50&#45;&gt;net_44 -->
 <g id="edge12" class="edge">
-<title>gw_33&#45;&gt;net_29</title>
+<title>gw_50&#45;&gt;net_44</title>
 <path fill="none" stroke="#888888" d="M670.74,-39C681.97,-39 693.23,-39 703.98,-39"/>
 <polygon fill="#888888" stroke="#888888" points="703.9,-42.5 713.9,-39 703.9,-35.5 703.9,-42.5"/>
 </g>
-<!-- net_30 -->
+<!-- net_45 -->
 <g id="node11" class="node">
-<title>net_30</title>
+<title>net_45</title>
 <path fill="#f5f5f5" stroke="#888888" d="M830.12,-277.12C830.12,-277.12 721.87,-277.12 721.87,-277.12 715.87,-277.12 709.87,-271.12 709.87,-265.12 709.87,-265.12 709.87,-242.88 709.87,-242.88 709.87,-236.88 715.87,-230.88 721.87,-230.88 721.87,-230.88 830.12,-230.88 830.12,-230.88 836.12,-230.88 842.12,-236.88 842.12,-242.88 842.12,-242.88 842.12,-265.12 842.12,-265.12 842.12,-271.12 836.12,-277.12 830.12,-277.12"/>
 <text text-anchor="middle" x="775.99" y="-263.62" font-family="Helvetica,sans-Serif" font-size="10.00">vlan&#45;admin&#45;dc</text>
 <text text-anchor="middle" x="775.99" y="-250.88" font-family="Helvetica,sans-Serif" font-size="10.00">10.40.40.0/24</text>
 <text text-anchor="middle" x="775.99" y="-238.12" font-family="Helvetica,sans-Serif" font-size="10.00">VLAN admin datacenter</text>
 </g>
-<!-- gw_34&#45;&gt;net_30 -->
+<!-- gw_51&#45;&gt;net_45 -->
 <g id="edge13" class="edge">
-<title>gw_34&#45;&gt;net_30</title>
+<title>gw_51&#45;&gt;net_45</title>
 <path fill="none" stroke="#888888" d="M673.15,-254C681.55,-254 689.95,-254 698.12,-254"/>
 <polygon fill="#888888" stroke="#888888" points="697.97,-257.5 707.97,-254 697.97,-250.5 697.97,-257.5"/>
 </g>
-<!-- svc_24 -->
+<!-- svc_36 -->
 <g id="node15" class="node">
-<title>svc_24</title>
+<title>svc_36</title>
 <path fill="#4e79a7" fill-opacity="0.250980" stroke="#4e79a7" stroke-dasharray="5,2" d="M112.31,-520C112.31,-520 58.81,-520 58.81,-520 52.81,-520 46.81,-514 46.81,-508 46.81,-508 46.81,-496 46.81,-496 46.81,-490 52.81,-484 58.81,-484 58.81,-484 112.31,-484 112.31,-484 118.31,-484 124.31,-490 124.31,-496 124.31,-496 124.31,-508 124.31,-508 124.31,-514 118.31,-520 112.31,-520"/>
 <text text-anchor="middle" x="85.56" y="-505.25" font-family="Helvetica,sans-Serif" font-size="10.00">relais&#45;admin</text>
 <text text-anchor="middle" x="85.56" y="-492.5" font-family="Helvetica,sans-Serif" font-size="10.00">(relay&#45;only)</text>
 </g>
-<!-- svc_23 -->
+<!-- svc_35 -->
 <g id="node16" class="node">
-<title>svc_23</title>
+<title>svc_35</title>
 <path fill="#f28e2b" fill-opacity="0.250980" stroke="#f28e2b" d="M111.56,-466C111.56,-466 59.56,-466 59.56,-466 53.56,-466 47.56,-460 47.56,-454 47.56,-454 47.56,-442 47.56,-442 47.56,-436 53.56,-430 59.56,-430 59.56,-430 111.56,-430 111.56,-430 117.56,-430 123.56,-436 123.56,-442 123.56,-442 123.56,-454 123.56,-454 123.56,-460 117.56,-466 111.56,-466"/>
 <text text-anchor="middle" x="85.56" y="-451.25" font-family="Helvetica,sans-Serif" font-size="10.00">wdg&#45;admins</text>
 <text text-anchor="middle" x="85.56" y="-438.5" font-family="Helvetica,sans-Serif" font-size="10.00">(entry)</text>
 </g>
-<!-- svc_22 -->
+<!-- svc_34 -->
 <g id="node17" class="node">
-<title>svc_22</title>
+<title>svc_34</title>
 <path fill="#59a14f" fill-opacity="0.250980" stroke="#59a14f" d="M106.68,-412C106.68,-412 64.43,-412 64.43,-412 58.43,-412 52.43,-406 52.43,-400 52.43,-400 52.43,-388 52.43,-388 52.43,-382 58.43,-376 64.43,-376 64.43,-376 106.68,-376 106.68,-376 112.68,-376 118.68,-382 118.68,-388 118.68,-388 118.68,-400 118.68,-400 118.68,-406 112.68,-412 106.68,-412"/>
 <text text-anchor="middle" x="85.56" y="-397.25" font-family="Helvetica,sans-Serif" font-size="10.00">wdg&#45;users</text>
 <text text-anchor="middle" x="85.56" y="-384.5" font-family="Helvetica,sans-Serif" font-size="10.00">(entry)</text>
