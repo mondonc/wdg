@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wdg-client"
+version = "0.1.0"
+description = "WDG multi-tunnel WireGuard client with SSO (CAS) authentication"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-Proprietary"
+dependencies = [
+    "requests>=2.31",
+    "click>=8.1",
+    "keyring>=24.0",
+    "cryptography>=42.0",
+]
+
+[project.scripts]
+wg-client = "wg_client.main:cli"
+
+[tool.setuptools]
+# Only the client ships as a package; server/ and gateway/ are Docker images.
+packages = ["wg_client"]
+
+[tool.setuptools.package-data]
+# Compiled translations must travel with the wheel (i18n.py resolves
+# <package>/locales/<lang>/LC_MESSAGES/wdg.mo).
+wg_client = ["locales/*/LC_MESSAGES/*.mo"]

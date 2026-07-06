@@ -28,10 +28,9 @@ pointer sur le plan de contrôle :
 wg-client configure --server https://vpn.example.org   # + --require-pq si exigé
 ```
 
-*(État actuel : le client est livré en module Python — `python -m
-wg_client.main <commande>` ; le paquet installable fournissant l'exécutable
-`wg-client` arrive avec le chantier « clients réels ». Les commandes de ce
-document sont écrites avec le nom cible.)*
+*(Le client s'installe en paquet Python — `pipx install wdg-client` —
+qui fournit l'exécutable `wg-client` utilisé dans ce document ; en
+développement, `python -m wg_client.main` reste équivalent.)*
 
 ## 2. Première connexion : enrôlement et récupération de la configuration
 

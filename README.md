@@ -68,7 +68,7 @@ An end-to-end proof of concept is implemented and **tested in Docker** (Linux da
 - [x] Relay gateways — inter-gateway WireGuard links, per-hop egress enforcement, chained exit (tested: real wdgw-a → relay-dc chain)
 - [x] Multi-tunnel client — simultaneous tunnels from `/api/plan/`, connect-time failover between a service's instances (tested: instance down and instance unresponsive)
 - [x] Python client (Linux) — tested end-to-end
-- [ ] Python client (macOS / Windows) — code present, **not yet validated on those OSes**
+- [ ] Python client (macOS / Windows) — code present and unit-tested, **real-machine validation pending** ([checklist](docs/VALIDATION-CLIENTS.md))
 - [ ] Web enrollment portal *(nice-to-have)*
 - [ ] Production hardening (secrets, TLS certs, HA)
 
@@ -127,17 +127,18 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for how it all fits together and ho
 ## Client usage
 
 ```bash
-pip install -r wg_client/requirements.txt
+pipx install .           # provides the `wg-client` executable (or: pip install .)
+# dev alternative: pip install -r wg_client/requirements.txt + python -m wg_client.main
 
-python -m wg_client.main configure --server https://vpn.example.com
-python -m wg_client.main login          # SSO, shows your identity + groups
-python -m wg_client.main connect        # provision + bring up every planned tunnel
-python -m wg_client.main status         # one line per tunnel (service, instance, handshake)
-python -m wg_client.main reconnect      # fresh plan, tears down and reconnects
-python -m wg_client.main disconnect
+wg-client configure --server https://vpn.example.com
+wg-client login          # SSO, shows your identity + groups
+wg-client connect        # provision + bring up every planned tunnel
+wg-client status         # one line per tunnel (service, instance, handshake)
+wg-client reconnect      # fresh plan, tears down and reconnects
+wg-client disconnect
 
 # Require post-quantum TLS (fail closed if unavailable):
-python -m wg_client.main configure --server https://vpn.example.com --require-pq
+wg-client configure --server https://vpn.example.com --require-pq
 ```
 
 `connect` brings up one WireGuard tunnel per planned service (specific routes
@@ -146,7 +147,7 @@ instance when the preferred one does not complete a handshake. On Windows the
 client sets the `MultipleSimultaneousTunnels` registry value the official
 WireGuard client requires for several active tunnels.
 
-French UI: `WDG_LANG=fr python -m wg_client.main --help`. Post-quantum negotiation needs the client's OpenSSL ≥ 3.5 — see [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md#client-side).
+French UI: `WDG_LANG=fr wg-client --help`. Post-quantum negotiation needs the client's OpenSSL ≥ 3.5 — see [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md#client-side).
 
 ---
 
@@ -154,6 +155,8 @@ French UI: `WDG_LANG=fr python -m wg_client.main --help`. Post-quantum negotiati
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — deploying the control plane and gateways, CAS registration, production notes
 - [docs/GROUPS.md](docs/GROUPS.md) — the group model and how entry/exit routing is derived
+- [docs/GUIDE-UTILISATEUR.md](docs/GUIDE-UTILISATEUR.md) — end-user guide (French)
+- [docs/VALIDATION-CLIENTS.md](docs/VALIDATION-CLIENTS.md) — macOS/Windows client acceptance checklist (French)
 - [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md) — the post-quantum design, guarantees and limits
 
 ---

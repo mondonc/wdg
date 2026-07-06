@@ -1,8 +1,25 @@
+import contextlib
+
 import click
+import keyring.errors
 import requests
 
 from wg_client import api, auth, config, keygen, plan, pqtls, tunnel
 from wg_client.i18n import _
+
+
+@contextlib.contextmanager
+def _keyring_guard():
+    """Turn a missing OS keyring into an actionable error, not a traceback."""
+    try:
+        yield
+    except keyring.errors.KeyringError as exc:
+        raise click.ClickException(
+            _("The system keyring is unavailable ({err}). Keys and tokens are "
+              "stored there; on a headless Linux, install a backend such as "
+              "gnome-keyring or the 'keyrings.alt' package.").format(
+                err=exc.__class__.__name__)
+        )
 
 
 def _require_setting(cfg: dict, key: str) -> str:
@@ -38,7 +55,8 @@ def login():
     cfg = config.load()
     server = _require_setting(cfg, "server")
     click.echo(_("Authenticating..."))
-    token = auth.get_token(server, force=True)
+    with _keyring_guard():
+        token = auth.get_token(server, force=True)
     who = api.WireGuardAPI(server, token).whoami()
     click.echo(_("✓ Logged in as {user}.").format(user=who["username"]))
     if who["groups"]:
@@ -59,17 +77,18 @@ def _connect():
         raise click.ClickException(str(exc))
 
     # keypair
-    private_key = config.get_private_key()
-    if not private_key:
-        click.echo(_("Generating new WireGuard keypair..."))
-        private_key, public_key = keygen.generate_keypair()
-        config.set_private_key(private_key)
-    else:
-        public_key = keygen.public_from_private(private_key)
+    with _keyring_guard():
+        private_key = config.get_private_key()
+        if not private_key:
+            click.echo(_("Generating new WireGuard keypair..."))
+            private_key, public_key = keygen.generate_keypair()
+            config.set_private_key(private_key)
+        else:
+            public_key = keygen.public_from_private(private_key)
 
-    # auth
-    click.echo(_("Authenticating..."))
-    token = auth.get_token(server)
+        # auth (token cache lives in the keyring too)
+        click.echo(_("Authenticating..."))
+        token = auth.get_token(server)
 
     # register + fetch the multi-tunnel plan
     client = api.WireGuardAPI(server, token)
@@ -164,7 +183,8 @@ def status():
 
 @cli.command(help=_("Remove saved tokens (forces re-authentication)."))
 def logout():
-    auth.logout()
+    with _keyring_guard():
+        auth.logout()
     click.echo(_("Tokens removed."))
 
 

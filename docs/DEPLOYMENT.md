@@ -214,5 +214,8 @@ The dev stack cuts corners a real deployment must fix:
   (internal CA or ACME) and remove `-k`/`verify=False` from clients.
 - **Database/HA**: managed PostgreSQL and backups (the 2×2 control-plane
   split itself is in place — see [DAT.md](DAT.md)).
-- **Client packaging**: ship an installable console script and validate the
-  macOS/Windows tunnel paths on real machines.
+- **Client validation on macOS/Windows**: the package installs everywhere
+  (`pipx install wdg-client` ships the `wg-client` console script; see the
+  repo-root `pyproject.toml`) and the platform layers are unit-tested with
+  mocks, but the macOS/Windows paths still need one real-machine run each —
+  checklist in [VALIDATION-CLIENTS.md](VALIDATION-CLIENTS.md).

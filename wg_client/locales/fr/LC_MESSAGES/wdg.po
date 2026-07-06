@@ -236,3 +236,12 @@ msgstr "Avertissement : {msg}"
 
 #~ msgid "● Tunnel up."
 #~ msgstr "● Tunnel actif."
+
+msgid ""
+"The system keyring is unavailable ({err}). Keys and tokens are stored "
+"there; on a headless Linux, install a backend such as gnome-keyring or the "
+"'keyrings.alt' package."
+msgstr ""
+"Le trousseau du système est indisponible ({err}). Les clés et jetons y "
+"sont stockés ; sur un Linux sans session graphique, installez un backend "
+"comme gnome-keyring ou le paquet « keyrings.alt »."

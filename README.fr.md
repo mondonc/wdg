@@ -68,7 +68,7 @@ Une preuve de concept de bout en bout est implémentée et **testée sous Docker
 - [x] Passerelles relais — liens WireGuard inter-passerelles, contrôle d'egress à chaque saut, sortie en chaîne (testé : chaîne réelle wdgw-a → relay-dc)
 - [x] Client multi-tunnel — tunnels simultanés depuis `/api/plan/`, bascule à la connexion entre instances d'un service (testé : instance morte et instance muette)
 - [x] Client Python (Linux) — testé de bout en bout
-- [ ] Client Python (macOS / Windows) — code présent, **pas encore validé sur ces OS**
+- [ ] Client Python (macOS / Windows) — code présent et testé unitairement, **recette sur machines réelles à faire** ([checklist](docs/VALIDATION-CLIENTS.md))
 - [ ] Portail web d'enrôlement *(nice-to-have)*
 - [ ] Durcissement production (secrets, certificats TLS, HA, clés passerelle persistantes)
 
@@ -121,20 +121,21 @@ Voir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) pour l'ensemble et la marche vers 
 ## Utilisation du client
 
 ```bash
-pip install -r wg_client/requirements.txt
+pipx install .           # fournit l'exécutable `wg-client` (ou : pip install .)
+# alternative dev : pip install -r wg_client/requirements.txt + python -m wg_client.main
 
-python -m wg_client.main configure --server https://vpn.example.com
-python -m wg_client.main login          # SSO, affiche identité + groupes
-python -m wg_client.main connect        # provisionne + monte tous les tunnels du plan
-python -m wg_client.main status         # une ligne par tunnel (service, instance, handshake)
-python -m wg_client.main reconnect      # plan frais : démonte puis remonte tout
-python -m wg_client.main disconnect
+wg-client configure --server https://vpn.example.com
+wg-client login          # SSO, affiche identité + groupes
+wg-client connect        # provisionne + monte tous les tunnels du plan
+wg-client status         # une ligne par tunnel (service, instance, handshake)
+wg-client reconnect      # plan frais : démonte puis remonte tout
+wg-client disconnect
 
 # Exiger le TLS post-quantique (échoue si indisponible) :
-python -m wg_client.main configure --server https://vpn.example.com --require-pq
+wg-client configure --server https://vpn.example.com --require-pq
 ```
 
-Interface en français : `WDG_LANG=fr python -m wg_client.main --help`. La négociation post-quantique nécessite un OpenSSL ≥ 3.5 côté client — voir [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md#client-side).
+Interface en français : `WDG_LANG=fr wg-client --help`. La négociation post-quantique nécessite un OpenSSL ≥ 3.5 côté client — voir [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md#client-side).
 
 ---
 
@@ -142,6 +143,8 @@ Interface en français : `WDG_LANG=fr python -m wg_client.main --help`. La négo
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — déploiement du plan de contrôle et des passerelles, enregistrement CAS, notes production
 - [docs/GROUPS.md](docs/GROUPS.md) — le modèle de groupes et la dérivation du routage entrée/sortie
+- [docs/GUIDE-UTILISATEUR.md](docs/GUIDE-UTILISATEUR.md) — guide utilisateur final
+- [docs/VALIDATION-CLIENTS.md](docs/VALIDATION-CLIENTS.md) — checklist de recette des clients macOS/Windows
 - [docs/POST-QUANTUM.md](docs/POST-QUANTUM.md) — le design post-quantique, garanties et limites
 
 ---

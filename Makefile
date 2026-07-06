@@ -41,7 +41,7 @@ test: ## Server unit tests + client unit tests
 	# Every plane for the test run: the suite exercises client, sync and admin routes.
 	$(COMPOSE) exec -e WDG_PLANES=external,internal,admin control-plane-admin python manage.py test
 	docker run --rm -v $(CURDIR):/repo -w /repo python:3.13-slim \
-		python -m unittest wg_client.test_plan wg_client.test_pqtls
+		python -m unittest wg_client.test_plan wg_client.test_pqtls wg_client.test_tunnel
 
 e2e: ## Integration suite (CAS login, provisioning, plan, groups)
 	$(COMPOSE) run --rm tester

@@ -221,3 +221,9 @@ msgstr ""
 #, python-brace-format
 msgid "Warning: {msg}"
 msgstr ""
+
+msgid ""
+"The system keyring is unavailable ({err}). Keys and tokens are stored "
+"there; on a headless Linux, install a backend such as gnome-keyring or the "
+"'keyrings.alt' package."
+msgstr ""
