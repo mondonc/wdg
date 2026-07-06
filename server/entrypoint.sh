@@ -14,7 +14,12 @@ except OSError:
     sleep 1
 done
 
-echo "Applying migrations..."
-python manage.py migrate --noinput
+# With several control-plane instances on one database, exactly one runs the
+# migrations (the dedicated one-shot service); replicas set WDG_MIGRATE=0 and
+# start once the schema is ready.
+if [ "${WDG_MIGRATE:-1}" = "1" ]; then
+    echo "Applying migrations..."
+    python manage.py migrate --noinput
+fi
 
 exec "$@"

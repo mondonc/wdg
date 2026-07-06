@@ -20,7 +20,14 @@ import time
 
 import requests
 
-CONTROL_PLANE = os.environ["WDG_CONTROL_PLANE"].rstrip("/")
+# One or several control-plane URLs (comma-separated). With two internal
+# configuration planes, the agent sticks to the one that answers and fails
+# over to the next on any transport error or 5xx.
+CONTROL_PLANES = [
+    u.strip().rstrip("/")
+    for u in os.environ["WDG_CONTROL_PLANE"].split(",")
+    if u.strip()
+]
 SYNC_TOKEN = os.environ["WDG_GATEWAY_TOKEN"]
 IFACE = os.environ.get("WDG_WG_IFACE", "wg0")
 POLL_INTERVAL = int(os.environ.get("WDG_POLL_INTERVAL", "5"))
@@ -242,15 +249,41 @@ def reconcile(state: dict):
 
 # --- Main loop -------------------------------------------------------------
 
+# Index of the control plane that served the last successful sync: tried
+# first on the next cycle, so a healthy plane is not abandoned between polls.
+_current_plane = 0
+
+
 def sync(public_key: str) -> dict:
-    resp = requests.post(
-        f"{CONTROL_PLANE}/api/gateways/sync/",
-        headers={"Authorization": f"Bearer {SYNC_TOKEN}"},
-        json={"public_key": public_key},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    global _current_plane
+    last_exc: Exception | None = None
+    for offset in range(len(CONTROL_PLANES)):
+        index = (_current_plane + offset) % len(CONTROL_PLANES)
+        url = CONTROL_PLANES[index]
+        try:
+            resp = requests.post(
+                f"{url}/api/gateways/sync/",
+                headers={"Authorization": f"Bearer {SYNC_TOKEN}"},
+                json={"public_key": public_key},
+                timeout=15,
+            )
+            # 4xx is a configuration problem (bad token): every plane would
+            # answer the same, surface it instead of hammering the others.
+            if resp.status_code >= 500:
+                raise requests.HTTPError(f"{resp.status_code} from {url}", response=resp)
+            resp.raise_for_status()
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as exc:
+            if isinstance(exc, requests.HTTPError) and exc.response is not None \
+                    and exc.response.status_code < 500:
+                raise
+            last_exc = exc
+            log(f"control plane {url} unavailable: {exc}")
+            continue
+        if index != _current_plane:
+            log(f"switched to control plane {url}")
+            _current_plane = index
+        return resp.json()
+    raise last_exc if last_exc else requests.ConnectionError("no control plane configured")
 
 
 def main():

@@ -37,28 +37,28 @@ server {
     # Rate-limited: one-time-code guessing / session-minting abuse.
     location = /auth/cas/exchange {
         limit_req zone=wdg_auth burst=5 nodelay;
-        proxy_pass http://control-plane:8000;
+        proxy_pass http://${UPSTREAM};
     }
     location = /auth/cas/login {
         limit_req zone=wdg_auth burst=5 nodelay;
-        proxy_pass http://control-plane:8000;
+        proxy_pass http://${UPSTREAM};
     }
 
     # Sensitive endpoints: optionally fail-closed unless the connection is PQ.
     location = /api/peers/register/ {
         ${PQ_ENFORCE}
-        proxy_pass http://control-plane:8000;
+        proxy_pass http://${UPSTREAM};
     }
     location = /api/config/ {
         ${PQ_ENFORCE}
-        proxy_pass http://control-plane:8000;
+        proxy_pass http://${UPSTREAM};
     }
     location = /api/plan/ {
         ${PQ_ENFORCE}
-        proxy_pass http://control-plane:8000;
+        proxy_pass http://${UPSTREAM};
     }
 
     location / {
-        proxy_pass http://control-plane:8000;
+        proxy_pass http://${UPSTREAM};
     }
 }

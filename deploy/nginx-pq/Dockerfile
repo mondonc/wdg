@@ -14,5 +14,7 @@ RUN apk add --no-cache openssl \
 # 20-envsubst-on-templates.sh, hence the names sorting before "20-e".
 COPY 10-pq.envsh /docker-entrypoint.d/10-pq.envsh
 COPY 11-real-ip.envsh /docker-entrypoint.d/11-real-ip.envsh
+COPY 12-upstream.envsh /docker-entrypoint.d/12-upstream.envsh
 COPY default.conf.template /etc/nginx/templates/default.conf.template
-RUN chmod +x /docker-entrypoint.d/10-pq.envsh /docker-entrypoint.d/11-real-ip.envsh
+RUN chmod +x /docker-entrypoint.d/10-pq.envsh /docker-entrypoint.d/11-real-ip.envsh \
+        /docker-entrypoint.d/12-upstream.envsh

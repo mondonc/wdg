@@ -18,7 +18,7 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(Gateway)
 class GatewayAdmin(admin.ModelAdmin):
-    list_display = ("name", "service", "site", "endpoint", "tunnel_subnet", "is_active")
+    list_display = ("name", "service", "site", "endpoint", "listen_port", "tunnel_subnet", "is_active")
     list_filter = ("service", "site", "is_active")
     search_fields = ("name", "endpoint")
 

@@ -79,6 +79,10 @@ class Gateway(models.Model):
     # "10.10.0.0/24". Unique across the fleet: relayed traffic is not NATed
     # between gateways, so client addresses must be unambiguous in the overlay.
     tunnel_subnet = models.CharField(max_length=64, unique=True)
+    # UDP port the agent binds WireGuard to. Distinct ports let several
+    # gateways (e.g. the users and admins instances) share one host; keep it
+    # consistent with the port advertised in ``endpoint`` unless a NAT remaps.
+    listen_port = models.PositiveIntegerField(default=51820)
     # Shared secret the gateway agent presents to the sync API.
     sync_token = models.CharField(max_length=128, blank=True)
     # Exit networks this gateway has a direct leg into. Networks further away

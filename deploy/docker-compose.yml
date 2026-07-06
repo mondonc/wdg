@@ -1,5 +1,35 @@
 name: wdg
 
+# The HA layout of docs/DAT.md, scaled down to one compose file: two external
+# and two internal control-plane instances share one PostgreSQL. The DNS
+# aliases `cp-ext` / `cp-int` are carried by both members of each pair —
+# Docker's DNS answers with both IPs (round-robin), standing in for the
+# DNS round-robin / VIP of the real deployment. Exactly one container (the
+# one-shot `migrate` service) applies the schema; instances only wait for it.
+
+x-cp-env: &cp-env
+  WDG_SECRET_KEY: dev-insecure-change-me
+  WDG_DEBUG: "1"
+  WDG_ALLOWED_HOSTS: "*"
+  POSTGRES_HOST: postgres
+  # CAS reachable from BOTH the browser (tester, in-network) and the
+  # control plane, so a single URL works for login + serviceValidate.
+  WDG_CAS_BASE_URL: http://cas-test:8080
+  # The CAS service root: the alias, so the callback lands on either external
+  # instance (the one-time code lives in the shared database).
+  WDG_PUBLIC_BASE_URL: http://cp-ext:8000
+  WDG_CAS_GROUP_ATTRIBUTES: memberOf,eduPersonAffiliation
+
+x-control-plane: &control-plane
+  build: ../server
+  volumes:
+    - ../server:/app
+  healthcheck:
+    test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
+    interval: 3s
+    timeout: 3s
+    retries: 30
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -23,41 +53,97 @@ services:
       timeout: 3s
       retries: 20
 
-  control-plane:
+  # One-shot: waits for PostgreSQL, applies migrations, exits. The plane
+  # instances start after it so none of them races on the schema.
+  migrate:
     build: ../server
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      <<: *cp-env
+    volumes:
+      - ../server:/app
+    command: ["python", "-c", "print('schema ready')"]
+
+  # --- external plane (clients): two instances behind the cp-ext alias ------
+
+  control-plane-ext-1:
+    <<: *control-plane
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
       cas-test:
         condition: service_started
     environment:
-      WDG_SECRET_KEY: dev-insecure-change-me
-      WDG_DEBUG: "1"
-      WDG_ALLOWED_HOSTS: "*"
-      POSTGRES_HOST: postgres
-      # CAS reachable from BOTH the browser (tester, in-network) and the
-      # control plane, so a single URL works for login + serviceValidate.
-      WDG_CAS_BASE_URL: http://cas-test:8080
-      WDG_PUBLIC_BASE_URL: http://control-plane:8000
-      WDG_CAS_GROUP_ATTRIBUTES: memberOf,eduPersonAffiliation
-    ports:
-      - "8000:8000"
-    volumes:
-      - ../server:/app
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')\""]
-      interval: 3s
-      timeout: 3s
-      retries: 30
+      <<: *cp-env
+      WDG_PLANES: external
+      WDG_MIGRATE: "0"
+    networks:
+      default:
+        aliases: [cp-ext]
 
-  # Post-quantum TLS terminator in front of the control plane (M5).
+  control-plane-ext-2:
+    <<: *control-plane
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      cas-test:
+        condition: service_started
+    environment:
+      <<: *cp-env
+      WDG_PLANES: external
+      WDG_MIGRATE: "0"
+    networks:
+      default:
+        aliases: [cp-ext]
+
+  # --- internal plane (admin + gateway sync): two instances, cp-int alias ---
+
+  control-plane-int-1:
+    <<: *control-plane
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      cas-test:
+        condition: service_started
+    environment:
+      <<: *cp-env
+      WDG_PLANES: internal
+      WDG_MIGRATE: "0"
+    ports:
+      - "8000:8000"   # Django admin from the host
+    networks:
+      default:
+        aliases: [cp-int]
+
+  control-plane-int-2:
+    <<: *control-plane
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      cas-test:
+        condition: service_started
+    environment:
+      <<: *cp-env
+      WDG_PLANES: internal
+      WDG_MIGRATE: "0"
+    networks:
+      default:
+        aliases: [cp-int]
+
+  # Post-quantum TLS terminator in front of the external plane (M5).
   # OpenSSL 3.5+ offers X25519MLKEM768; classic clients still fall back.
+  # cp-ext resolves to both external instances: implicit round-robin upstream.
   nginx-pq:
     build: ./nginx-pq
     depends_on:
-      control-plane:
+      control-plane-ext-1:
+        condition: service_healthy
+      control-plane-ext-2:
         condition: service_healthy
     environment:
+      UPSTREAM: cp-ext:8000
       # "on" makes sensitive endpoints refuse non-PQ connections (fail-closed).
       REQUIRE_PQ: "${REQUIRE_PQ:-off}"
       # Trusted LB CIDR(s), comma-separated: recover the client IP from
@@ -72,10 +158,12 @@ services:
     build: ../server
     profiles: ["test"]
     depends_on:
-      control-plane:
+      control-plane-ext-1:
+        condition: service_healthy
+      control-plane-ext-2:
         condition: service_healthy
     environment:
-      CONTROL_PLANE: http://control-plane:8000
+      CONTROL_PLANE: http://cp-ext:8000
       CAS: http://cas-test:8080
     volumes:
       - ./tests:/tests
@@ -112,10 +200,15 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     depends_on:
-      control-plane:
+      control-plane-int-1:
+        condition: service_healthy
+      control-plane-int-2:
         condition: service_healthy
     environment:
-      WDG_CONTROL_PLANE: http://control-plane:8000
+      # Both internal instances: the agent sticks to one, fails over to the
+      # other (deliberately explicit URLs, to exercise the agent-side failover
+      # rather than Docker's DNS round-robin).
+      WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
       WDG_GATEWAY_TOKEN: gw-a-sync-secret
     volumes:
       # Persistent WireGuard key: the gateway keeps its identity across restarts.
@@ -135,10 +228,12 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     depends_on:
-      control-plane:
+      control-plane-int-1:
+        condition: service_healthy
+      control-plane-int-2:
         condition: service_healthy
     environment:
-      WDG_CONTROL_PLANE: http://control-plane:8000
+      WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
       WDG_GATEWAY_TOKEN: gw-a2-sync-secret
     volumes:
       - gwa2-state:/var/lib/wdg
@@ -156,10 +251,12 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     depends_on:
-      control-plane:
+      control-plane-int-1:
+        condition: service_healthy
+      control-plane-int-2:
         condition: service_healthy
     environment:
-      WDG_CONTROL_PLANE: http://control-plane:8000
+      WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
       WDG_GATEWAY_TOKEN: gw-b-sync-secret
     volumes:
       - gwb-state:/var/lib/wdg
@@ -188,10 +285,12 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
     depends_on:
-      control-plane:
+      control-plane-int-1:
+        condition: service_healthy
+      control-plane-int-2:
         condition: service_healthy
     environment:
-      WDG_CONTROL_PLANE: http://control-plane:8000
+      WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
       WDG_GATEWAY_TOKEN: gw-dc-sync-secret
     volumes:
       - gwdc-state:/var/lib/wdg
@@ -219,10 +318,12 @@ services:
     cap_add:
       - NET_ADMIN
     depends_on:
-      control-plane:
+      control-plane-ext-1:
+        condition: service_healthy
+      control-plane-ext-2:
         condition: service_healthy
     environment:
-      CONTROL_PLANE: http://control-plane:8000
+      CONTROL_PLANE: http://cp-ext:8000
       USERNAME: alice
       TARGET_URL: http://10.0.0.10:8000
     networks:

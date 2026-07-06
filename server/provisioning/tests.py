@@ -118,6 +118,26 @@ class ProvisioningTests(TestCase):
         )
         self.assertEqual(resp.status_code, 403)
 
+    def test_sync_reports_the_gateway_listen_port(self):
+        from core.models import Gateway
+
+        gw_a = Gateway.objects.get(name="gw-a")
+        resp = self.client.post(
+            "/api/gateways/sync/", data="{}", content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {gw_a.sync_token}",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["listen_port"], 51820)
+
+        # Two gateways sharing one host bind distinct UDP ports.
+        gw_a.listen_port = 51821
+        gw_a.save(update_fields=["listen_port"])
+        resp = self.client.post(
+            "/api/gateways/sync/", data="{}", content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {gw_a.sync_token}",
+        )
+        self.assertEqual(resp.json()["listen_port"], 51821)
+
     def test_config_is_scoped_to_the_gateway(self):
         from core import resolve
         from core.models import Gateway

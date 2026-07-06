@@ -10,6 +10,9 @@ REGISTRY ?= registry.example.org/wdg
 TAG      ?= $(shell git rev-parse --short HEAD)
 IMAGES   := control-plane gateway nginx-pq
 COMPOSE  := docker compose -f deploy/docker-compose.yml
+# manage.py runs on an internal-plane instance (admin surface).
+MANAGE   := $(COMPOSE) exec control-plane-int-1 python manage.py
+MANAGE_T := $(COMPOSE) exec -T control-plane-int-1 python manage.py
 DOC_DIR  := docs/generated
 
 .PHONY: help build push up seed test e2e doc doc-scenarios logo clean
@@ -32,10 +35,11 @@ up: ## Start the dev stack (control plane, mock CAS, nginx-pq)
 	$(COMPOSE) up -d --build
 
 seed: ## Seed the demo topology (idempotent)
-	$(COMPOSE) exec control-plane python manage.py seed_demo
+	$(MANAGE) seed_demo
 
 test: ## Server unit tests + client unit tests
-	$(COMPOSE) exec control-plane python manage.py test
+	# Both planes for the test run: the suite exercises client and sync routes.
+	$(COMPOSE) exec -e WDG_PLANES=external,internal control-plane-int-1 python manage.py test
 	docker run --rm -v $(CURDIR):/repo -w /repo python:3.13-slim \
 		python -m unittest wg_client.test_plan wg_client.test_pqtls
 
@@ -44,8 +48,8 @@ e2e: ## Integration suite (CAS login, provisioning, plan, groups)
 
 doc: ## Generate the network plan from the database (PDF/SVG diagram + Markdown tables)
 	@mkdir -p $(DOC_DIR)
-	$(COMPOSE) exec -T control-plane python manage.py topology_export --format dot > $(DOC_DIR)/topology.dot
-	$(COMPOSE) exec -T control-plane python manage.py topology_export --format markdown > $(DOC_DIR)/topology.md
+	$(MANAGE_T) topology_export --format dot > $(DOC_DIR)/topology.dot
+	$(MANAGE_T) topology_export --format markdown > $(DOC_DIR)/topology.md
 	docker build -q -t wdg-doc deploy/doc >/dev/null
 	docker run --rm -v $(abspath $(DOC_DIR)):/work -w /work wdg-doc sh -c "\
 		dot -Tpdf topology.dot -o topology.pdf && \
@@ -57,16 +61,16 @@ doc-scenarios: ## Sans-WDG / avec-WDG comparison diagrams (replaces then restore
 	@mkdir -p $(DOC_DIR)
 	# The demo topology is restored by the trap even if a step fails: the
 	# database must never be left on a presentation scenario.
-	sh -c 'trap "$(COMPOSE) exec -T control-plane python manage.py seed_scenario demo" EXIT; set -e; \
-		$(COMPOSE) exec -T control-plane python manage.py seed_scenario sans-wdg; \
-		$(COMPOSE) exec -T control-plane python manage.py topology_export --format dot \
+	sh -c 'trap "$(MANAGE_T) seed_scenario demo" EXIT; set -e; \
+		$(MANAGE_T) seed_scenario sans-wdg; \
+		$(MANAGE_T) topology_export --format dot \
 			--title "Cas 1 — accès actuels sans WDG : silos DGTW / VPN / bastions" > $(DOC_DIR)/scenario-sans-wdg.dot; \
-		$(COMPOSE) exec -T control-plane python manage.py topology_export --format markdown \
+		$(MANAGE_T) topology_export --format markdown \
 			--title "Cas 1 — accès actuels sans WDG" > $(DOC_DIR)/scenario-sans-wdg.md; \
-		$(COMPOSE) exec -T control-plane python manage.py seed_scenario avec-wdg; \
-		$(COMPOSE) exec -T control-plane python manage.py topology_export --format dot \
+		$(MANAGE_T) seed_scenario avec-wdg; \
+		$(MANAGE_T) topology_export --format dot \
 			--title "Cas 2 — architecture cible WDG : entrée unifiée, relais admin, failover par centre" > $(DOC_DIR)/scenario-avec-wdg.dot; \
-		$(COMPOSE) exec -T control-plane python manage.py topology_export --format markdown \
+		$(MANAGE_T) topology_export --format markdown \
 			--title "Cas 2 — architecture cible WDG" > $(DOC_DIR)/scenario-avec-wdg.md'
 	docker build -q -t wdg-doc deploy/doc >/dev/null
 	docker run --rm -v $(abspath $(DOC_DIR)):/work -w /work wdg-doc sh -c "\

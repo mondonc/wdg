@@ -3,7 +3,8 @@
 This guide covers how the WDG control plane, gateways and PQ terminator fit
 together, how authentication is wired to Apereo CAS, and what remains before a
 production rollout. For the local dev stack, see the Quickstart in the
-[README](../README.md).
+[README](../README.md). The target server layout (which host runs which
+containers, and the full flow matrix) is in [DAT.md](DAT.md).
 
 ## Components
 
@@ -65,7 +66,12 @@ All settings come from the environment (see `server/wdg_server/settings.py`):
 | `WDG_TOKEN_MAX_AGE` | WDG token lifetime, seconds |
 | `WDG_AUTH_CODE_MAX_AGE` | lifetime of the one-time login code, seconds (default 60) |
 | `WDG_PLANES` | configuration planes served by this instance: `external`, `internal`, or both (default) — see below |
+| `WDG_MIGRATE` | `1` (default) applies migrations at start; set `0` on every instance but one (or run a dedicated one-shot job) when several instances share the database |
 | `POSTGRES_*` | database connection |
+
+The image serves through **gunicorn** (workers via the standard
+`WEB_CONCURRENCY`); the admin's static files are baked in and served by
+whitenoise, so the internal plane needs nothing in front of it.
 
 ### Configuration planes (`WDG_PLANES`)
 
@@ -122,7 +128,7 @@ Agent environment:
 
 | Variable | Meaning |
 |---|---|
-| `WDG_CONTROL_PLANE` | control plane base URL |
+| `WDG_CONTROL_PLANE` | control plane base URL(s), comma-separated — the agent sticks to the first one that answers and fails over to the next on connection errors or 5xx (for the two internal planes) |
 | `WDG_GATEWAY_TOKEN` | the gateway's `sync_token` (see the `Gateway` admin) |
 | `WDG_WG_IFACE` | interface name (default `wg0`) |
 | `WDG_POLL_INTERVAL` | sync interval in seconds (default 5) |
@@ -134,14 +140,19 @@ kernel with WireGuard. In containers this is `cap_add: [NET_ADMIN]` +
 metal, run the agent as a systemd service.
 
 Register a gateway in the admin (or `seed_demo`): set `name`, `endpoint`
-(the public `host:port` clients dial), `tunnel_subnet`, `sync_token`, and the
-`networks` it can route to.
+(the public `host:port` clients dial), `listen_port` (the UDP port the agent
+binds — distinct ports let several gateways share one host, e.g. the users
+and admins instances of a wdgw server), `tunnel_subnet`, `sync_token`, and
+the `networks` it can route to.
 
 ## PQ terminator
 
 `deploy/nginx-pq/` builds nginx (OpenSSL ≥ 3.5) that terminates client HTTPS and
-proxies to the control plane. `REQUIRE_PQ=on` makes the sensitive endpoints
-refuse non-post-quantum connections. See [POST-QUANTUM.md](POST-QUANTUM.md).
+proxies to the control plane. `UPSTREAM` selects the backend
+(default `control-plane:8000`); a DNS name resolving to several addresses
+becomes an implicit round-robin upstream with retry-next on connection
+failure. `REQUIRE_PQ=on` makes the sensitive endpoints refuse
+non-post-quantum connections. See [POST-QUANTUM.md](POST-QUANTUM.md).
 
 It also rate-limits the unauthenticated auth endpoints (`/auth/cas/login`,
 `/auth/cas/exchange`): 10 requests/minute per client IP with a burst of 5,
@@ -196,8 +207,7 @@ The dev stack cuts corners a real deployment must fix:
   demo values — generate and inject real secrets.
 - **TLS certificates**: `nginx-pq` uses a self-signed cert. Use a real cert
   (internal CA or ACME) and remove `-k`/`verify=False` from clients.
-- **Database/HA**: managed PostgreSQL, backups, multiple control-plane replicas.
-- **Runserver → gunicorn**: the compose uses Django's dev server; serve via
-  gunicorn behind nginx.
+- **Database/HA**: managed PostgreSQL and backups (the 2×2 control-plane
+  split itself is in place — see [DAT.md](DAT.md)).
 - **Client packaging**: ship an installable console script and validate the
   macOS/Windows tunnel paths on real machines.

@@ -1,0 +1,5 @@
+# Backend the proxy forwards to (host:port). A DNS name resolving to several
+# addresses (e.g. the two external control-plane instances behind one alias)
+# becomes an implicit nginx upstream: round-robin plus retry-next on
+# connection failure. Resolved once at startup.
+export UPSTREAM="${UPSTREAM:-control-plane:8000}"

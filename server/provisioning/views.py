@@ -12,8 +12,6 @@ from core.models import Device, Gateway
 
 from . import service, wgconf
 
-GATEWAY_LISTEN_PORT = 51820
-
 
 @csrf_exempt
 @require_bearer
@@ -204,7 +202,7 @@ def gateway_sync(request):
             "gateway": gateway.name,
             "address": _gateway_address(gateway),
             "tunnel_subnet": gateway.tunnel_subnet,
-            "listen_port": GATEWAY_LISTEN_PORT,
+            "listen_port": gateway.listen_port,
             "peers": peers,
             "relay_peers": resolve.relay_peers_for_gateway(gateway),
             "forward_rules": resolve.forward_rules_for_gateway(gateway),
