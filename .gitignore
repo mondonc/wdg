@@ -16,3 +16,4 @@ db.sqlite3
 
 # Generated documentation (make doc)
 /docs/generated/
+dist/

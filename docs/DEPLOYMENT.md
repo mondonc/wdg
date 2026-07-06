@@ -214,8 +214,11 @@ The dev stack cuts corners a real deployment must fix:
   (internal CA or ACME) and remove `-k`/`verify=False` from clients.
 - **Database/HA**: managed PostgreSQL and backups (the 2×2 control-plane
   split itself is in place — see [DAT.md](DAT.md)).
-- **Client validation on macOS/Windows**: the package installs everywhere
-  (`pipx install wdg-client` ships the `wg-client` console script; see the
-  repo-root `pyproject.toml`) and the platform layers are unit-tested with
-  mocks, but the macOS/Windows paths still need one real-machine run each —
-  checklist in [VALIDATION-CLIENTS.md](VALIDATION-CLIENTS.md).
+- **Client validation on macOS/Windows**: `make build-clients` produces the
+  all-in-one desktop binaries (Linux natively, the Windows `.exe` under
+  Wine, with the official WireGuard MSI bundled next to it); the platform
+  layers are unit-tested with mocks, but the macOS/Windows paths still need
+  one real-machine run each — checklist in
+  [VALIDATION-CLIENTS.md](VALIDATION-CLIENTS.md). Privilege elevation from
+  the GUI (UAC/polkit) is not integrated yet: tunnels need an
+  administrator/root launch.

@@ -15,7 +15,7 @@ MANAGE   := $(COMPOSE) exec control-plane-admin python manage.py
 MANAGE_T := $(COMPOSE) exec -T control-plane-admin python manage.py
 DOC_DIR  := docs/generated
 
-.PHONY: help build push up seed test e2e e2e-ha doc doc-scenarios logo clean
+.PHONY: help build push up seed test e2e e2e-ha doc doc-scenarios build-clients logo clean
 
 help: ## List available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -88,6 +88,50 @@ doc-scenarios: ## Sans-WDG / avec-WDG comparison diagrams (replaces then restore
 		   $(DOC_DIR)/scenario-$$s.md docs/scenarios/; \
 	done
 	@echo "→ $(DOC_DIR)/scenario-{sans,avec}-wdg.{pdf,svg,png,md} (+ docs/scenarios/)"
+
+CLIENT_DIST := dist/clients
+# Official WireGuard MSI bundled next to the Windows exe (first-run install).
+WIREGUARD_MSI_URL ?= https://download.wireguard.com/windows-client/wireguard-amd64-0.5.3.msi
+
+build-clients: ## All-in-one desktop clients: Linux binaries + Windows .exe + bundled WireGuard MSI (dist/clients/)
+	@mkdir -p $(CLIENT_DIST)/linux $(CLIENT_DIST)/windows
+	# --- Linux: one-file GUI + CLI binaries, built in Docker ---
+	docker run --rm -v $(CURDIR):/repo:ro -v $(abspath $(CLIENT_DIST))/linux:/out python:3.13-slim sh -c "\
+		apt-get -qq update >/dev/null && \
+		apt-get -qq install -y binutils libgl1 libegl1 libfontconfig1 libglib2.0-0 libdbus-1-3 libxkbcommon0 libgssapi-krb5-2 >/dev/null && \
+		cp -r /repo /build && cd /build && rm -rf build dist && \
+		pip install -q '.[gui]' pyinstaller && \
+		pyinstaller --clean -y --onefile --name wg-client-gui \
+			--add-data wg_client/locales:wg_client/locales \
+			--add-data wg_client/assets:wg_client/assets \
+			--collect-all keyring \
+			deploy/clients/gui_entry.py >/dev/null && \
+		pyinstaller --clean -y --onefile --name wg-client \
+			--add-data wg_client/locales:wg_client/locales \
+			--collect-all keyring \
+			deploy/clients/cli_entry.py >/dev/null && \
+		cp dist/wg-client-gui dist/wg-client /out/ && chown $(shell id -u):$(shell id -g) /out/*"
+	# --- Windows: .exe via PyInstaller under Wine (same entry points) ---
+	docker run --rm -v $(CURDIR):/repo:ro -v $(abspath $(CLIENT_DIST))/windows:/out \
+		batonogov/pyinstaller-windows:latest "\
+		mkdir /build && tar -C /repo --exclude=.git --exclude=dist --exclude=docs \
+			--exclude=server --exclude=logo -cf - . | tar -C /build -xf - && cd /build && \
+		pip install '.[gui]' && \
+		pyinstaller --clean -y --onefile --windowed --name wg-client-gui \
+			--add-data 'wg_client/locales;wg_client/locales' \
+			--add-data 'wg_client/assets;wg_client/assets' \
+			--collect-all keyring \
+			deploy/clients/gui_entry.py && \
+		pyinstaller --clean -y --onefile --name wg-client \
+			--add-data 'wg_client/locales;wg_client/locales' \
+			--collect-all keyring \
+			deploy/clients/cli_entry.py && \
+		cp dist/wg-client-gui.exe dist/wg-client.exe /out/"
+	# Bundled WireGuard: shipped next to the exe, installed on first run if absent.
+	curl -fsSL -o $(CLIENT_DIST)/windows/wireguard-installer.msi $(WIREGUARD_MSI_URL) \
+		|| echo "!! MSI WireGuard non téléchargé — déposez-le manuellement : $(WIREGUARD_MSI_URL)"
+	@echo "→ $(CLIENT_DIST)/linux/{wg-client-gui,wg-client}  $(CLIENT_DIST)/windows/{wg-client-gui.exe,wg-client.exe,wireguard-installer.msi}"
+	@echo "macOS : PyInstaller ne cross-compile pas — lancer les mêmes commandes pyinstaller sur un Mac (voir docs/VALIDATION-CLIENTS.md)."
 
 logo: ## Rebuild logo assets from logo/wdg-logo.tex (needs lualatex + pdftocairo)
 	cd logo && lualatex -interaction=nonstopmode wdg-logo.tex >/dev/null

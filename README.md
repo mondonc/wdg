@@ -68,6 +68,7 @@ An end-to-end proof of concept is implemented and **tested in Docker** (Linux da
 - [x] Relay gateways — inter-gateway WireGuard links, per-hop egress enforcement, chained exit (tested: real wdgw-a → relay-dc chain)
 - [x] Multi-tunnel client — simultaneous tunnels from `/api/plan/`, connect-time failover between a service's instances (tested: instance down and instance unresponsive)
 - [x] Python client (Linux) — tested end-to-end
+- [x] Desktop GUI + system tray (Qt/PySide6, same ops layer as the CLI) and all-in-one binaries — `make build-clients` (Linux binaries + Windows .exe with the official WireGuard MSI bundled and auto-installed on first run)
 - [ ] Python client (macOS / Windows) — code present and unit-tested, **real-machine validation pending** ([checklist](docs/VALIDATION-CLIENTS.md))
 - [ ] Web enrollment portal *(nice-to-have)*
 - [ ] Production hardening (secrets, TLS certs, HA)

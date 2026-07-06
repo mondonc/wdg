@@ -2,10 +2,16 @@
 
 Le code des trois plateformes existe et les chemins macOS/Windows sont
 couverts par des tests unitaires à base de mocks (`wg_client/test_tunnel.py`) ;
-seul **Linux** a été validé de bout en bout (client-probe Docker). Ce
-document est la checklist de recette à dérouler **sur de vraies machines**
-macOS et Windows pour lever la réserve — une exécution complète par OS
-suffit.
+seul **Linux** a été validé de bout en bout (client-probe Docker, binaire
+PyInstaller autonome). Ce document est la checklist de recette à dérouler
+**sur de vraies machines** macOS et Windows pour lever la réserve — une
+exécution complète par OS suffit.
+
+Les artefacts se produisent avec `make build-clients` : binaires Linux,
+`wg-client-gui.exe`/`wg-client.exe` Windows (compilés sous Wine — la
+recette ci-dessous les valide sur un vrai Windows) et le MSI WireGuard
+officiel embarqué. Le binaire macOS se construit sur un Mac avec les
+mêmes commandes PyInstaller (voir la cible `build-clients` du Makefile).
 
 Prérequis communs : un compte de test dans le SSO avec au moins deux
 services accordés (deux tunnels attendus), une stack WDG joignable
@@ -21,9 +27,11 @@ Environnement : macOS avec l'app WireGuard (App Store) **ou**
 `brew install wireguard-tools` (la CLI `wg-quick` est requise : c'est elle
 que le client pilote).
 
-1. [ ] `pipx install wdg-client` → `wg-client --help` fonctionne.
-2. [ ] `wg-client configure --server https://…` puis `wg-client connect` :
-   le navigateur s'ouvre, le SSO aboutit, retour terminal sans action.
+1. [ ] Binaire `wg-client-gui` (compilé sur Mac, mêmes commandes
+   PyInstaller que `build-clients`) démarre ; icône dans la barre de
+   menus. À défaut, `pipx install 'wdg-client[gui]'` + `wg-client-gui`.
+2. [ ] **Se connecter** (ou `wg-client connect`) : le navigateur s'ouvre,
+   le SSO aboutit, retour sans action.
 3. [ ] Trousseau : ouvrir Trousseaux d'accès → une entrée `wg-client`
    (clé privée + jeton). La clé n'apparaît dans aucun fichier.
 4. [ ] Deux tunnels montés (`wg-client status` : une ligne par service,
@@ -42,12 +50,16 @@ que le client pilote).
 
 ## Windows
 
-Environnement : Windows 10/11 avec le client WireGuard officiel
-(`C:\Program Files\WireGuard\`), terminal **administrateur** (l'installation
-de services tunnel l'exige).
+Environnement : Windows 10/11, de préférence **sans** WireGuard préinstallé
+(pour éprouver l'installation embarquée) ; lancement **administrateur**
+(l'installation du MSI et des services tunnel l'exige).
 
-1. [ ] `pipx install wdg-client` → `wg-client --help` fonctionne.
-2. [ ] `wg-client configure` + `wg-client connect` : SSO navigateur OK.
+1. [ ] `wg-client-gui.exe` (build Wine) démarre ; icône dans la zone de
+   notification ; **au premier lancement sans WireGuard, propose et
+   réussit l'installation silencieuse du MSI embarqué** (posé à côté de
+   l'exe). À défaut, `pipx install wdg-client` pour la CLI seule.
+2. [ ] Bouton **Se connecter** (ou `wg-client connect` en terminal admin) :
+   SSO navigateur OK.
 3. [ ] Gestionnaire d'identifiants : entrées `wg-client` présentes.
 4. [ ] Registre : `HKLM\Software\WireGuard\MultipleSimultaneousTunnels = 1`
    (posé automatiquement par le client).

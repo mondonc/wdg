@@ -16,14 +16,20 @@ dependencies = [
     "cryptography>=42.0",
 ]
 
+[project.optional-dependencies]
+gui = ["PySide6>=6.6"]
+
 [project.scripts]
 wg-client = "wg_client.main:cli"
+
+[project.gui-scripts]
+wg-client-gui = "wg_client.gui:main"
 
 [tool.setuptools]
 # Only the client ships as a package; server/ and gateway/ are Docker images.
 packages = ["wg_client"]
 
 [tool.setuptools.package-data]
-# Compiled translations must travel with the wheel (i18n.py resolves
-# <package>/locales/<lang>/LC_MESSAGES/wdg.mo).
-wg_client = ["locales/*/LC_MESSAGES/*.mo"]
+# Compiled translations and the tray icon must travel with the wheel
+# (i18n.py resolves <package>/locales/…, gui.py <package>/assets/…).
+wg_client = ["locales/*/LC_MESSAGES/*.mo", "assets/*.svg"]

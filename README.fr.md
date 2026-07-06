@@ -68,6 +68,7 @@ Une preuve de concept de bout en bout est implémentée et **testée sous Docker
 - [x] Passerelles relais — liens WireGuard inter-passerelles, contrôle d'egress à chaque saut, sortie en chaîne (testé : chaîne réelle wdgw-a → relay-dc)
 - [x] Client multi-tunnel — tunnels simultanés depuis `/api/plan/`, bascule à la connexion entre instances d'un service (testé : instance morte et instance muette)
 - [x] Client Python (Linux) — testé de bout en bout
+- [x] Interface graphique + zone de notification (Qt/PySide6, même couche d'opérations que la CLI) et binaires tout-en-un — `make build-clients` (binaires Linux + .exe Windows avec le MSI WireGuard officiel embarqué, installé au premier lancement)
 - [ ] Client Python (macOS / Windows) — code présent et testé unitairement, **recette sur machines réelles à faire** ([checklist](docs/VALIDATION-CLIENTS.md))
 - [ ] Portail web d'enrôlement *(nice-to-have)*
 - [ ] Durcissement production (secrets, certificats TLS, HA, clés passerelle persistantes)

@@ -5,51 +5,53 @@ l'exploitent. Aucune connaissance réseau n'est nécessaire. Pour comprendre
 comment le système fonctionne sous le capot, voir
 [PARCOURS-UTILISATEUR.md](PARCOURS-UTILISATEUR.md).
 
-En deux mots : vous installez WireGuard et le client WDG, vous vous
-connectez une fois avec votre compte habituel (SSO), et ensuite tout est
+En deux mots : vous lancez l'application WDG (un seul fichier), vous vous
+connectez avec votre compte habituel (SSO), et ensuite tout est
 automatique — vos accès suivent vos droits, sans fichier de configuration
 à manipuler.
 
 ## 1. Installation (une fois)
 
-Deux logiciels à installer :
+**Le plus simple : l'application graphique tout-en-un** fournie par votre
+équipe informatique — un seul fichier à lancer, rien d'autre à installer :
 
-**WireGuard** (le moteur du tunnel) :
+| Système | Fichier | Remarque |
+|---|---|---|
+| Windows | `wg-client-gui.exe` | au premier lancement, propose d'installer WireGuard tout seul (fourni avec) |
+| Linux | `wg-client-gui` | WireGuard vient de votre distribution : `sudo apt install wireguard` |
+| macOS | `wg-client-gui.app` | avec `brew install wireguard-tools` |
 
-| Système | Comment |
-|---|---|
-| Windows | installeur officiel : <https://www.wireguard.com/install/> |
-| macOS | app WireGuard du Mac App Store, ou `brew install wireguard-tools` |
-| Linux | `sudo apt install wireguard` (ou équivalent de votre distribution) |
+Lancez l'application : une icône WDG apparaît près de l'horloge (zone de
+notification). Dans la fenêtre, renseignez une fois le champ **Serveur**
+(adresse fournie par votre équipe, généralement `https://vpn.example.org`)
+et cliquez **Enregistrer**.
 
-**Le client WDG** (`wg-client`) — fourni par votre équipe informatique :
+<details>
+<summary>Alternative en ligne de commande (utilisateurs avancés)</summary>
+
+Installez WireGuard (tableau ci-dessus), puis :
 
 ```sh
-pipx install wdg-client        # ou : pip install wdg-client
-```
-
-Puis indiquez une fois pour toutes l'adresse du service (fournie par
-votre équipe, généralement `https://vpn.example.org`) :
-
-```sh
+pipx install wdg-client        # fournit la commande wg-client
 wg-client configure --server https://vpn.example.org
 ```
+</details>
 
 ## 2. Se connecter
 
-```sh
-wg-client connect
-```
+Cliquez **Se connecter** dans la fenêtre WDG (ou dans le menu de l'icône,
+clic droit). En ligne de commande : `wg-client connect`.
 
 Ce qui va se passer :
 
 1. **Votre navigateur s'ouvre** sur la page de connexion habituelle de
    l'établissement (SSO). Connectez-vous comme d'habitude — mot de passe,
    double authentification si vous en avez une.
-2. Revenez au terminal : le client récupère vos accès et **monte les
+2. Revenez à l'application : le client récupère vos accès et **monte les
    tunnels tout seul**. À la première connexion, il génère aussi votre
    clé personnelle (elle ne quitte jamais votre poste).
-3. Vous voyez une ligne par accès, par exemple :
+3. Vous voyez une ligne par accès dans le journal (et le tableau d'état
+   se remplit), par exemple :
 
    ```
    ✓ wdg-users actif via gw-users-a (wdg0 : 10.30.0.0/23, 10.20.10.0/24).
@@ -64,14 +66,18 @@ La session de connexion est valable **12 heures** : au-delà, un
 
 ## 3. Au quotidien
 
-| Ce que vous voulez | Commande |
-|---|---|
-| Vous connecter | `wg-client connect` |
-| Voir l'état de vos tunnels | `wg-client status` |
-| Vous déconnecter | `wg-client disconnect` |
-| Recharger vos accès (droits modifiés) | `wg-client reconnect` |
-| Vérifier qui vous êtes / vos groupes | `wg-client login` |
-| Oublier la session sur ce poste | `wg-client logout` |
+Tout se fait depuis l'icône WDG près de l'horloge (clic droit) ou la
+fenêtre. Fermer la fenêtre ne coupe rien : l'application reste dans la
+zone de notification ; **Quitter** est dans le menu de l'icône.
+
+| Ce que vous voulez | Icône / fenêtre | Ligne de commande |
+|---|---|---|
+| Vous connecter | menu **Se connecter** | `wg-client connect` |
+| Voir l'état de vos tunnels | ouvrir la fenêtre (tableau) | `wg-client status` |
+| Vous déconnecter | menu **Se déconnecter** | `wg-client disconnect` |
+| Recharger vos accès (droits modifiés) | menu **Reconnecter** | `wg-client reconnect` |
+| Vérifier qui vous êtes / vos groupes | bouton **Qui suis-je ?** | `wg-client login` |
+| Oublier la session sur ce poste | — | `wg-client logout` |
 
 En français : le client parle la langue de votre système ; pour forcer,
 `WDG_LANG=fr wg-client …`.
@@ -80,8 +86,14 @@ En français : le client parle la langue de votre système ; pour forcer,
 
 **On m'a donné accès à un nouveau réseau, je ne le vois pas.**
 Vos droits sont bien actifs côté serveur (en quelques secondes), mais
-votre poste garde la liste d'accès chargée à la connexion. Faites
-`wg-client reconnect` : elle sera rechargée.
+votre poste garde la liste d'accès chargée à la connexion. Cliquez
+**Reconnecter** (ou `wg-client reconnect`) : elle sera rechargée.
+
+**« Permission denied » / rien ne se monte.**
+Établir un tunnel demande les droits administrateur du poste : sous
+Windows, lancez l'application par clic droit → « Exécuter en tant
+qu'administrateur » ; sous Linux/macOS, lancez-la avec `sudo` (l'élévation
+intégrée arrivera dans une version ultérieure).
 
 **« Site en panne » / la connexion a mis du temps puis a fonctionné.**
 C'est normal : si le point d'entrée le plus proche ne répond pas, le

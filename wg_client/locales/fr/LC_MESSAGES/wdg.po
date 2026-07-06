@@ -6,77 +6,173 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wdg 0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-04 09:52+0000\n"
+"POT-Creation-Date: 2026-07-06 20:23+0000\n"
 "PO-Revision-Date: 2026-07-03 23:20+0200\n"
 "Last-Translator: WDG contributors\n"
 "Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"Generated-By: Babel 2.17.0\n"
+"Generated-By: Babel 2.18.0\n"
 
-#: main.py:12
 #, python-brace-format
 msgid "'{key}' is missing. Run 'wg-client configure' first."
 msgstr "'{key}' manquant. Lancez d'abord : wg-client configure"
 
-#: main.py:17
-msgid "WireGuard client with SSO authentication."
-msgstr "Client WireGuard avec authentification SSO."
+msgid "(none)"
+msgstr "(aucun)"
 
-#: main.py:22
-msgid "Configure connection parameters."
-msgstr "Configure les paramètres de connexion."
+msgid "Authenticate and bring up every planned WireGuard tunnel."
+msgstr "S'authentifie et active tous les tunnels WireGuard prévus."
 
-#: main.py:23
-msgid "Server URL (e.g. https://vpn.example.com)"
-msgstr "URL du serveur (ex: https://vpn.example.com)"
-
-#: main.py:27
-msgid "Refuse to connect unless the TLS channel is post-quantum."
-msgstr "Refuse la connexion si le canal TLS n'est pas post-quantique."
-
-#: main.py:33
-msgid "Configuration saved."
-msgstr "Configuration sauvegardée."
-
-#: main.py:36
 msgid "Authenticate via SSO and show your identity."
 msgstr "S'authentifie via SSO et affiche votre identité."
 
-#: main.py:40 main.py:71
 msgid "Authenticating..."
 msgstr "Authentification..."
 
-#: main.py:43
 #, python-brace-format
-msgid "✓ Logged in as {user}."
-msgstr "✓ Connecté en tant que {user}."
+msgid "Authentication error: {error}"
+msgstr "Erreur d'authentification : {error}"
 
-#: main.py:45
+msgid "Authentication successful. You may close this tab."
+msgstr "Authentification réussie. Vous pouvez fermer cet onglet."
+
+msgid "Bring down the WireGuard tunnels."
+msgstr "Désactive les tunnels WireGuard."
+
+#, python-brace-format
+msgid "Bringing up {gateway} failed ({error}), trying next instance."
+msgstr ""
+"Échec de l'activation de {gateway} ({error}), essai de l'instance suivante."
+
+msgid "Configuration saved."
+msgstr "Configuration sauvegardée."
+
+msgid "Configure connection parameters."
+msgstr "Configure les paramètres de connexion."
+
+msgid "Connect"
+msgstr "Se connecter"
+
+#, python-brace-format
+msgid "Connecting {service} via {gateway}..."
+msgstr "Connexion de {service} via {gateway}..."
+
+#, python-brace-format
+msgid "Connection used '{group}', not post-quantum."
+msgstr "Connexion via '{group}', non post-quantique."
+
+msgid "Disconnect"
+msgstr "Se déconnecter"
+
+#, python-brace-format
+msgid "Error: {error}. You may close this tab."
+msgstr "Erreur : {error}. Vous pouvez fermer cet onglet."
+
+#, python-brace-format
+msgid "Error: {message}"
+msgstr "Erreur : {message}"
+
+msgid "Fetching tunnel plan..."
+msgstr "Récupération du plan de tunnels..."
+
+msgid "Gateway"
+msgstr "Passerelle"
+
+msgid "Generating new WireGuard keypair..."
+msgstr "Génération d'une nouvelle paire de clés WireGuard..."
+
+msgid "Groups: (none)"
+msgstr "Groupes : (aucun)"
+
 #, python-brace-format
 msgid "Groups: {groups}"
 msgstr "Groupes : {groups}"
 
-#: main.py:47
-msgid "Groups: (none)"
-msgstr "Groupes : (aucun)"
+msgid "Handshake"
+msgstr "Poignée de main"
 
-#: main.py:64
-msgid "Generating new WireGuard keypair..."
-msgstr "Génération d'une nouvelle paire de clés WireGuard..."
+msgid "Interface"
+msgstr "Interface"
 
-#: main.py:77
+#, python-brace-format
+msgid "No handshake with {gateway}, trying next instance."
+msgstr "Pas de handshake avec {gateway}, essai de l'instance suivante."
+
+#, python-brace-format
+msgid "No reachable instance for service '{service}'."
+msgstr "Aucune instance joignable pour le service '{service}'."
+
+msgid "Not signed in."
+msgstr "Non connecté."
+
+msgid "Open WDG"
+msgstr "Ouvrir WDG"
+
+msgid "Opening browser for authentication..."
+msgstr "Ouverture du navigateur pour l'authentification..."
+
+#, python-brace-format
+msgid "Post-quantum TLS unavailable: client OpenSSL is {ver} (needs >= 3.5)."
+msgstr ""
+"TLS post-quantique indisponible : l'OpenSSL du client est {ver} (nécessite "
+">= 3.5)."
+
+msgid "Quit"
+msgstr "Quitter"
+
+msgid "Reconnect"
+msgstr "Reconnecter"
+
+msgid "Refuse to connect unless the TLS channel is post-quantum."
+msgstr "Refuse la connexion si le canal TLS n'est pas post-quantique."
+
 msgid "Registering peer..."
 msgstr "Enregistrement du peer..."
 
-#: main.py:80
-msgid "Fetching tunnel plan..."
-msgstr "Récupération du plan de tunnels..."
+msgid "Remove saved tokens (forces re-authentication)."
+msgstr "Supprime les tokens sauvegardés (force une ré-authentification)."
 
-#: main.py:85
+msgid "Require post-quantum TLS"
+msgstr "Exiger le TLS post-quantique"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Server URL (e.g. https://vpn.example.com)"
+msgstr "URL du serveur (ex: https://vpn.example.com)"
+
+msgid "Server did not report a TLS group; cannot confirm post-quantum."
+msgstr ""
+"Le serveur n'a pas indiqué de groupe TLS ; impossible de confirmer le post-"
+"quantique."
+
+msgid "Server:"
+msgstr "Serveur :"
+
+msgid "Service"
+msgstr "Service"
+
+msgid "Settings"
+msgstr "Réglages"
+
+msgid "Show the status of each tunnel."
+msgstr "Affiche l'état de chaque tunnel."
+
+#, python-brace-format
+msgid "Signed in as {user} — groups: {groups}"
+msgstr "Connecté en tant que {user} — groupes : {groups}"
+
+msgid "Still running in the system tray. Quit from the tray menu."
+msgstr ""
+"Toujours actif dans la zone de notification. Quittez via le menu de l'icône."
+
+msgid "Tear down and re-establish every tunnel (fresh plan)."
+msgstr "Arrête puis rétablit tous les tunnels (plan à jour)."
+
 msgid ""
 "The server requires a post-quantum connection, which your client could not "
 "negotiate (upgrade to OpenSSL >= 3.5)."
@@ -84,149 +180,115 @@ msgstr ""
 "Le serveur exige une connexion post-quantique, que votre client n'a pas pu "
 "négocier (mettez OpenSSL à jour en >= 3.5)."
 
-#: main.py:104
 #, python-brace-format
-msgid "✓ {service} up via {gateway} ({iface}: {ips})."
-msgstr "✓ {service} actif via {gateway} ({iface} : {ips})."
+msgid ""
+"The system keyring is unavailable ({err}). Keys and tokens are stored there;"
+" on a headless Linux, install a backend such as gnome-keyring or the "
+"'keyrings.alt' package."
+msgstr ""
+"Le trousseau du système est indisponible ({err}). Les clés et jetons y sont "
+"stockés ; sur un Linux sans session graphique, installez un backend comme "
+"gnome-keyring ou le paquet « keyrings.alt »."
 
-#: main.py:114
-msgid "○ No tunnel recorded."
-msgstr "○ Aucun tunnel enregistré."
-
-#: main.py:117
-#, python-brace-format
-msgid "✓ {iface} down."
-msgstr "✓ {iface} arrêté."
-
-#: main.py:121
-msgid "Authenticate and bring up every planned WireGuard tunnel."
-msgstr "S'authentifie et active tous les tunnels WireGuard prévus."
-
-#: main.py:126
-msgid "Bring down the WireGuard tunnels."
-msgstr "Désactive les tunnels WireGuard."
-
-#: main.py:131
-msgid "Tear down and re-establish every tunnel (fresh plan)."
-msgstr "Arrête puis rétablit tous les tunnels (plan à jour)."
-
-#: main.py:137
-msgid "Show the status of each tunnel."
-msgstr "Affiche l'état de chaque tunnel."
-
-#: main.py:141
-msgid "○ Tunnel down."
-msgstr "○ Tunnel inactif."
-
-#: main.py:147
-#, python-brace-format
-msgid "handshake {age}s ago"
-msgstr "handshake il y a {age} s"
-
-#: main.py:149
-msgid "no handshake data"
-msgstr "pas de données de handshake"
-
-#: main.py:152
-#, python-brace-format
-msgid "● {service} via {gateway} ({iface}) — {detail}"
-msgstr "● {service} via {gateway} ({iface}) — {detail}"
-
-#: main.py:159
-#, python-brace-format
-msgid "○ {service} ({iface}) is down."
-msgstr "○ {service} ({iface}) est arrêté."
-
-#: main.py:165
-msgid "Remove saved tokens (forces re-authentication)."
-msgstr "Supprime les tokens sauvegardés (force une ré-authentification)."
-
-#: main.py:168
-msgid "Tokens removed."
-msgstr "Tokens supprimés."
-
-#: auth.py:44
-msgid "Authentication successful. You may close this tab."
-msgstr "Authentification réussie. Vous pouvez fermer cet onglet."
-
-#: auth.py:48
-#, python-brace-format
-msgid "Error: {error}. You may close this tab."
-msgstr "Erreur : {error}. Vous pouvez fermer cet onglet."
-
-#: auth.py:74
-msgid "Opening browser for authentication..."
-msgstr "Ouverture du navigateur pour l'authentification..."
-
-#: auth.py:84
 msgid "Timeout: no response from browser."
 msgstr "Timeout : aucune réponse du navigateur."
 
-#: auth.py:87
+msgid "Tokens removed."
+msgstr "Tokens supprimés."
+
+msgid "WDG — remote access"
+msgstr "WDG — accès distant"
+
 #, python-brace-format
-msgid "Authentication error: {error}"
-msgstr "Erreur d'authentification : {error}"
+msgid "Warning: {msg}"
+msgstr "Avertissement : {msg}"
 
-#: tunnel.py:54
-msgid "wg-quick not found. Install wireguard-tools (Linux/macOS)."
-msgstr "wg-quick introuvable. Installez wireguard-tools (Linux/macOS)."
-
-#: tunnel.py:66
-msgid "wireguard.exe not found. Install the official WireGuard client."
-msgstr "wireguard.exe introuvable. Installez le client WireGuard officiel."
-
-#: plan.py:91
-#, python-brace-format
-msgid "Connecting {service} via {gateway}..."
-msgstr "Connexion de {service} via {gateway}..."
-
-#: plan.py:98
-#, python-brace-format
-msgid "Bringing up {gateway} failed ({error}), trying next instance."
-msgstr "Échec de l'activation de {gateway} ({error}), essai de l'instance suivante."
-
-#: plan.py:105
-#, python-brace-format
-msgid "No handshake with {gateway}, trying next instance."
-msgstr "Pas de handshake avec {gateway}, essai de l'instance suivante."
-
-#: plan.py:110
-#, python-brace-format
-msgid "No reachable instance for service '{service}'."
-msgstr "Aucune instance joignable pour le service '{service}'."
-
-#: pqtls.py:40
-#, python-brace-format
-msgid "Post-quantum TLS unavailable: client OpenSSL is {ver} (needs >= 3.5)."
-msgstr ""
-"TLS post-quantique indisponible : l'OpenSSL du client est {ver} (nécessite "
-">= 3.5)."
-
-#: pqtls.py:44
 #, python-brace-format
 msgid "Warning: {msg} Falling back to classic TLS."
 msgstr "Avertissement : {msg} Repli sur du TLS classique."
 
-#: pqtls.py:56
+msgid "Who am I?"
+msgstr "Qui suis-je ?"
+
+msgid "WireGuard client with SSO authentication."
+msgstr "Client WireGuard avec authentification SSO."
+
+msgid "WireGuard installed."
+msgstr "WireGuard installé."
+
+msgid ""
+"WireGuard is missing. Install it with your distribution (e.g. 'sudo apt "
+"install wireguard')."
+msgstr ""
+"WireGuard est absent. Installez-le avec votre distribution (ex. « sudo apt "
+"install wireguard »)."
+
+msgid ""
+"WireGuard is missing. Install the official WireGuard client from "
+"https://www.wireguard.com/install/."
+msgstr ""
+"WireGuard est absent. Installez le client officiel depuis "
+"https://www.wireguard.com/install/."
+
+msgid ""
+"WireGuard is missing. Install wireguard-tools (e.g. 'brew install wireguard-"
+"tools')."
+msgstr ""
+"WireGuard est absent. Installez wireguard-tools (ex. « brew install "
+"wireguard-tools »)."
+
+msgid ""
+"WireGuard is not installed. Install the bundled official WireGuard now? "
+"(administrator rights required)"
+msgstr ""
+"WireGuard n'est pas installé. Installer maintenant le WireGuard officiel "
+"fourni ? (droits administrateur requis)"
+
+msgid "down"
+msgstr "coupé"
+
+#, python-brace-format
+msgid "handshake {age}s ago"
+msgstr "handshake il y a {age} s"
+
+msgid "no handshake data"
+msgstr "pas de données de handshake"
+
+msgid "wg-quick not found. Install wireguard-tools (Linux/macOS)."
+msgstr "wg-quick introuvable. Installez wireguard-tools (Linux/macOS)."
+
+msgid "wireguard.exe not found. Install the official WireGuard client."
+msgstr "wireguard.exe introuvable. Installez le client WireGuard officiel."
+
+msgid "○ No tunnel recorded."
+msgstr "○ Aucun tunnel enregistré."
+
+msgid "○ Tunnel down."
+msgstr "○ Tunnel inactif."
+
+#, python-brace-format
+msgid "○ {service} ({iface}) is down."
+msgstr "○ {service} ({iface}) est arrêté."
+
+#, python-brace-format
+msgid "● {service} via {gateway} ({iface}) — {detail}"
+msgstr "● {service} via {gateway} ({iface}) — {detail}"
+
+#, python-brace-format
+msgid "✓ Logged in as {user}."
+msgstr "✓ Connecté en tant que {user}."
+
 #, python-brace-format
 msgid "✓ Post-quantum TLS negotiated ({group})."
 msgstr "✓ TLS post-quantique négocié ({group})."
 
-#: pqtls.py:60
-msgid "Server did not report a TLS group; cannot confirm post-quantum."
-msgstr ""
-"Le serveur n'a pas indiqué de groupe TLS ; impossible de confirmer le post-"
-"quantique."
-
-#: pqtls.py:62
 #, python-brace-format
-msgid "Connection used '{group}', not post-quantum."
-msgstr "Connexion via '{group}', non post-quantique."
+msgid "✓ {iface} down."
+msgstr "✓ {iface} arrêté."
 
-#: pqtls.py:65
 #, python-brace-format
-msgid "Warning: {msg}"
-msgstr "Avertissement : {msg}"
+msgid "✓ {service} up via {gateway} ({iface}: {ips})."
+msgstr "✓ {service} actif via {gateway} ({iface} : {ips})."
 
 #~ msgid "Bringing up tunnel..."
 #~ msgstr "Activation du tunnel..."
@@ -236,12 +298,3 @@ msgstr "Avertissement : {msg}"
 
 #~ msgid "● Tunnel up."
 #~ msgstr "● Tunnel actif."
-
-msgid ""
-"The system keyring is unavailable ({err}). Keys and tokens are stored "
-"there; on a headless Linux, install a backend such as gnome-keyring or the "
-"'keyrings.alt' package."
-msgstr ""
-"Le trousseau du système est indisponible ({err}). Les clés et jetons y "
-"sont stockés ; sur un Linux sans session graphique, installez un backend "
-"comme gnome-keyring ou le paquet « keyrings.alt »."

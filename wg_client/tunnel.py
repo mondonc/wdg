@@ -80,6 +80,63 @@ def ensure_windows_multitunnel():
     )
 
 
+def wireguard_available() -> bool:
+    """Is the platform's WireGuard tooling present?"""
+    p = _platform()
+    if p in ("linux", "macos"):
+        try:
+            _find_wg_quick()
+            return True
+        except FileNotFoundError:
+            return False
+    try:
+        _find_wireguard_exe()
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def bundled_windows_installer() -> Path | None:
+    """
+    The all-in-one Windows build ships the official WireGuard MSI next to
+    the executable (see `make build-clients`); locate it when frozen.
+    """
+    import sys
+
+    if _platform() != "windows":
+        return None
+    base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    for candidate in (base, Path(sys.executable).parent):
+        msi = candidate / "wireguard-installer.msi"
+        if msi.exists():
+            return msi
+    return None
+
+
+def install_windows_wireguard() -> bool:
+    """Silently install the bundled official MSI (needs admin). Best effort."""
+    msi = bundled_windows_installer()
+    if msi is None:
+        return False
+    subprocess.run(
+        ["msiexec", "/i", str(msi), "/qn", "/norestart"], capture_output=True
+    )
+    return wireguard_available()
+
+
+def install_hint() -> str:
+    """Per-platform guidance when WireGuard is missing (no bundled installer)."""
+    p = _platform()
+    if p == "linux":
+        return _("WireGuard is missing. Install it with your distribution "
+                 "(e.g. 'sudo apt install wireguard').")
+    if p == "macos":
+        return _("WireGuard is missing. Install wireguard-tools "
+                 "(e.g. 'brew install wireguard-tools').")
+    return _("WireGuard is missing. Install the official WireGuard client "
+             "from https://www.wireguard.com/install/.")
+
+
 def up(name: str, conf: str):
     path = write_config(conf, name)
     p = _platform()
