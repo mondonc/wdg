@@ -56,18 +56,20 @@ its permitted networks.
 
 | Group | Services (entry) | Exit networks |
 |---|---|---|
-| `vpn-users` | gw-a | net-common |
-| `vpn-admins` | gw-a, gw-b | net-common, net-lab-a, net-lab-b |
-| `research-lab-a` | gw-a | net-lab-a |
-| `research-lab-b` | gw-b | net-lab-b |
+| `vpn-users` | wdg-a | net-common |
+| `vpn-admins` | wdg-a, wdg-b, dc-access | net-common, net-lab-a, net-lab-b, net-dc |
+| `research-lab-a` | wdg-a | net-lab-a |
+| `research-lab-b` | wdg-b | net-lab-b |
 
-Gateways route: `gw-a → {net-common, net-lab-a}`, `gw-b → {net-common, net-lab-b}`.
+Gateways route: `wdgw-a → {net-common, net-lab-a}`, `wdgw-b → {net-common,
+net-lab-b}` (gateways `wdgw-a`/`wdgw-a2` are the instances of the `wdg-a`
+service, one per centre).
 
-- **alice** (`vpn-users, vpn-admins, research-lab-a`): enters via gw-a **and**
-  gw-b; via gw-a she reaches net-common + net-lab-a, via gw-b net-common +
-  net-lab-b.
-- **bob** (`vpn-users, research-lab-b`): via gw-a only net-common; net-lab-b is
-  reachable only via gw-b. He cannot reach net-lab-a at all.
+- **alice** (`vpn-users, vpn-admins, research-lab-a`): enters via the wdg-a
+  **and** wdg-b services; via wdgw-a she reaches net-common + net-lab-a, via
+  wdgw-b net-common + net-lab-b.
+- **bob** (`vpn-users, research-lab-b`): via wdgw-a only net-common; net-lab-b is
+  reachable only via wdgw-b. He cannot reach net-lab-a at all.
 
 ## CAS attribute → group mapping (`server/core/sync.py`)
 

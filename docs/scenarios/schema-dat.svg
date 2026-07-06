@@ -71,7 +71,7 @@
 
   <rect x="60" y="620" width="340" height="70" rx="8" fill="white" stroke="#88171A" stroke-width="1.6"/>
   <text x="230" y="645" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#88171A">srv-cp-int-1 — control-plane (interne)</text>
-  <text x="230" y="665" text-anchor="middle" font-size="10.5" fill="#555">admin Django + sync des passerelles</text>
+  <text x="230" y="665" text-anchor="middle" font-size="10.5" fill="#555">sync des passerelles et relais</text>
 
   <!-- ============ centre B ============ -->
   <rect x="430" y="355" width="380" height="350" rx="12" fill="none" stroke="#bbb"/>
@@ -100,7 +100,7 @@
 
   <rect x="450" y="620" width="340" height="70" rx="8" fill="white" stroke="#88171A" stroke-width="1.6"/>
   <text x="620" y="645" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#88171A">srv-cp-int-2 — control-plane (interne)</text>
-  <text x="620" y="665" text-anchor="middle" font-size="10.5" fill="#555">admin Django + sync des passerelles</text>
+  <text x="620" y="665" text-anchor="middle" font-size="10.5" fill="#555">sync des passerelles et relais</text>
 
   <!-- ============ datacenter ============ -->
   <rect x="820" y="355" width="380" height="350" rx="12" fill="none" stroke="#bbb"/>
@@ -127,9 +127,12 @@
   <text x="1100" y="545" text-anchor="middle" font-size="10.5" fill="#222">relay-admin-dc</text>
   <text x="1100" y="560" text-anchor="middle" font-size="9.5" fill="#555">(relay-only)</text>
 
-  <rect x="840" y="620" width="340" height="70" rx="8" fill="white" stroke="#333" stroke-width="1.6"/>
-  <text x="1010" y="645" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#222">srv-db — PostgreSQL :5432</text>
-  <text x="1010" y="665" text-anchor="middle" font-size="10.5" fill="#555">état partagé des 4 planes</text>
+  <rect x="840" y="620" width="160" height="70" rx="8" fill="white" stroke="#333" stroke-width="1.6"/>
+  <text x="920" y="645" text-anchor="middle" font-size="11" font-weight="bold" fill="#222">srv-db</text>
+  <text x="920" y="663" text-anchor="middle" font-size="10" fill="#555">PostgreSQL :5432</text>
+  <rect x="1020" y="620" width="160" height="70" rx="8" fill="white" stroke="#88171A" stroke-width="1.6"/>
+  <text x="1100" y="645" text-anchor="middle" font-size="11" font-weight="bold" fill="#88171A">srv-admin</text>
+  <text x="1100" y="663" text-anchor="middle" font-size="10" fill="#555">l&#8217;admin Django (unique)</text>
 
   <!-- ============ admin workstations ============ -->
   <rect x="40" y="740" width="200" height="60" rx="10" fill="#f4f4f4" stroke="#999"/>
@@ -177,11 +180,12 @@
   </g>
   <!-- 7: planes -> PostgreSQL -->
   <g fill="none" stroke="#888" stroke-width="1.1" marker-end="url(#ag)">
-    <path d="M790,310 C820,420 950,560 996,616"/>
+    <path d="M790,310 C820,420 900,560 930,616"/>
     <path d="M790,655 C808,655 820,655 836,655"/>
+    <path d="M1020,672 C1014,672 1010,672 1004,672"/>
   </g>
   <!-- 8: admin workstations -> internal plane -->
-  <path d="M175,740 C190,720 205,708 218,694" fill="none" stroke="#888" stroke-width="1.1" marker-end="url(#ag)"/>
+  <path d="M240,755 C600,722 950,716 1082,692" fill="none" stroke="#888" stroke-width="1.1" marker-end="url(#ag)"/>
 
   <!-- ============ flow number badges ============ -->
   <g font-size="10.5" font-weight="bold" text-anchor="middle">
@@ -192,8 +196,8 @@
     <circle cx="228" cy="486" r="9" fill="#e15759"/><text x="228" y="490" fill="white">5</text>
     <circle cx="622" cy="486" r="9" fill="#e15759"/><text x="622" y="490" fill="white">5</text>
     <circle cx="48" cy="540" r="9" fill="#88171A"/><text x="48" y="544" fill="white">6</text>
-    <circle cx="1008" cy="568" r="9" fill="#888"/><text x="1008" y="572" fill="white">7</text>
-    <circle cx="205" cy="718" r="9" fill="#888"/><text x="205" y="722" fill="white">8</text>
+    <circle cx="1008" cy="590" r="9" fill="#888"/><text x="1008" y="594" fill="white">7</text>
+    <circle cx="660" cy="722" r="9" fill="#888"/><text x="660" y="726" fill="white">8</text>
   </g>
 
   <!-- ============ flow key + legend ============ -->

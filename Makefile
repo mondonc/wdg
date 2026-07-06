@@ -10,12 +10,12 @@ REGISTRY ?= registry.example.org/wdg
 TAG      ?= $(shell git rev-parse --short HEAD)
 IMAGES   := control-plane gateway nginx-pq
 COMPOSE  := docker compose -f deploy/docker-compose.yml
-# manage.py runs on an internal-plane instance (admin surface).
-MANAGE   := $(COMPOSE) exec control-plane-int-1 python manage.py
-MANAGE_T := $(COMPOSE) exec -T control-plane-int-1 python manage.py
+# manage.py runs on the admin instance (the configuration surface).
+MANAGE   := $(COMPOSE) exec control-plane-admin python manage.py
+MANAGE_T := $(COMPOSE) exec -T control-plane-admin python manage.py
 DOC_DIR  := docs/generated
 
-.PHONY: help build push up seed test e2e doc doc-scenarios logo clean
+.PHONY: help build push up seed test e2e e2e-ha doc doc-scenarios logo clean
 
 help: ## List available targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
@@ -38,13 +38,16 @@ seed: ## Seed the demo topology (idempotent)
 	$(MANAGE) seed_demo
 
 test: ## Server unit tests + client unit tests
-	# Both planes for the test run: the suite exercises client and sync routes.
-	$(COMPOSE) exec -e WDG_PLANES=external,internal control-plane-int-1 python manage.py test
+	# Every plane for the test run: the suite exercises client, sync and admin routes.
+	$(COMPOSE) exec -e WDG_PLANES=external,internal,admin control-plane-admin python manage.py test
 	docker run --rm -v $(CURDIR):/repo -w /repo python:3.13-slim \
 		python -m unittest wg_client.test_plan wg_client.test_pqtls
 
 e2e: ## Integration suite (CAS login, provisioning, plan, groups)
 	$(COMPOSE) run --rm tester
+
+e2e-ha: ## HA failover checks: agent int-1→int-2, external RR with one instance down (stops/restarts containers)
+	bash deploy/tests/ha_failover.sh
 
 doc: ## Generate the network plan from the database (PDF/SVG diagram + Markdown tables)
 	@mkdir -p $(DOC_DIR)

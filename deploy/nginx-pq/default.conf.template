@@ -21,7 +21,7 @@ server {
     ssl_ecdh_curve X25519MLKEM768:X25519:prime256v1;
 
     # Behind a load balancer, recover the client IP from X-Forwarded-For so the
-    # rate limit keys on the real client (REAL_IP_FROM; see 20-real-ip.envsh).
+    # rate limit keys on the real client (REAL_IP_FROM; see 11-real-ip.envsh).
     ${REAL_IP_CONFIG}
 
     # Surface the negotiated group so clients can verify (and for debugging).

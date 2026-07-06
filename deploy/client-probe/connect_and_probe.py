@@ -13,7 +13,7 @@ Env:
   REACH      comma-separated URLs that MUST be reachable through the tunnels
   DENY       comma-separated URLs that MUST NOT be reachable
   EXPECT_VIA optional "service=gateway" assertions on the connected instance,
-             comma-separated (e.g. "gw-a=gw-a2" after a failover)
+             comma-separated (e.g. "wdg-a=wdgw-a2" after a failover)
   MODE       "probe" (default: test then exit) or "hold" (test then stay up)
 """
 

@@ -10,38 +10,38 @@ from core.models import Gateway, Group, Network, RelayLink, Service, Site
 
 SITES = [
     # name, cas_values (values of the WDG_CAS_SITE_ATTRIBUTE attribute)
-    ("site-a", ["centre-a"]),
-    ("site-b", ["centre-b"]),
+    ("centre-a", ["centre-a"]),
+    ("centre-b", ["centre-b"]),
 ]
 
 # One demo entry service per gateway (single instance), plus a relay-only
-# datacenter service reached through gw-a; richer multi-site topologies are
+# datacenter service reached through the wdg-a service; richer multi-site topologies are
 # exercised by the unit tests.
 SERVICES = [
     # name, accepts_clients, default_route
-    ("gw-a", True, False),
-    ("gw-b", True, False),
+    ("wdg-a", True, False),
+    ("wdg-b", True, False),
     ("dc-access", False, False),
 ]
 
 GATEWAYS = [
     # name, service, site, endpoint, tunnel_subnet, sync_token
     # public_key is left blank: the gateway agent self-reports it at sync time.
-    # gw-a2 is the site-b instance of the "gw-a" service: same legs, same
+    # wdgw-a2 is the centre-b instance of the "wdg-a" service: same legs, same
     # relay link — the failover instance clients fall back to.
-    ("gw-a", "gw-a", "site-a", "gw-a:51820", "10.10.0.0/24", "gw-a-sync-secret"),
-    ("gw-a2", "gw-a", "site-b", "gw-a2:51820", "10.10.3.0/24", "gw-a2-sync-secret"),
-    ("gw-b", "gw-b", "site-b", "gw-b:51820", "10.10.1.0/24", "gw-b-sync-secret"),
-    ("gw-dc", "dc-access", "site-a", "gw-dc:51820", "10.10.2.0/24", "gw-dc-sync-secret"),
+    ("wdgw-a", "wdg-a", "centre-a", "wdgw-a:51820", "10.10.0.0/24", "wdgw-a-sync-secret"),
+    ("wdgw-a2", "wdg-a", "centre-b", "wdgw-a2:51820", "10.10.3.0/24", "wdgw-a2-sync-secret"),
+    ("wdgw-b", "wdg-b", "centre-b", "wdgw-b:51820", "10.10.1.0/24", "wdgw-b-sync-secret"),
+    ("relay-dc", "dc-access", "centre-a", "relay-dc:51820", "10.10.2.0/24", "relay-dc-sync-secret"),
 ]
 
 NETWORKS = [
     # net-common's CIDR matches the docker "exitnet" used by the M3 tunnel test,
-    # so an authorized client actually reaches the exit-target through gw-a.
+    # so an authorized client actually reaches the exit-target through wdgw-a.
     ("net-common", "10.0.0.0/24", "Shared intranet services"),
     ("net-lab-a", "192.168.20.0/24", "Research lab A"),
     ("net-lab-b", "192.168.30.0/24", "Research lab B"),
-    # Behind the gw-a → gw-dc relay (no direct leg from any entry gateway).
+    # Behind the wdgw-a → relay-dc relay (no direct leg from any entry gateway).
     ("net-dc", "192.168.40.0/24", "Datacenter network (via relay)"),
 ]
 
@@ -49,32 +49,32 @@ NETWORKS = [
 # cas_names shows configurable mapping: a WDG group can be reached from several
 # CAS values (a short name AND the full LDAP DN, or an affiliation string).
 GROUPS = [
-    ("vpn-users", ["vpn-users"], ["gw-a"], ["net-common"]),
+    ("vpn-users", ["vpn-users"], ["wdg-a"], ["net-common"]),
     (
         "vpn-admins",
         ["vpn-admins", "cn=vpn-admins,ou=groups,dc=example,dc=org"],
-        ["gw-a", "gw-b", "dc-access"],
+        ["wdg-a", "wdg-b", "dc-access"],
         ["net-common", "net-lab-a", "net-lab-b", "net-dc"],
     ),
-    ("research-lab-a", ["research-lab-a"], ["gw-a"], ["net-lab-a"]),
-    ("research-lab-b", ["research-lab-b"], ["gw-b"], ["net-lab-b"]),
+    ("research-lab-a", ["research-lab-a"], ["wdg-a"], ["net-lab-a"]),
+    ("research-lab-b", ["research-lab-b"], ["wdg-b"], ["net-lab-b"]),
     # Driven by the eduPersonAffiliation "staff" attribute rather than memberOf.
-    ("staff-network", ["staff"], ["gw-a"], ["net-common"]),
+    ("staff-network", ["staff"], ["wdg-a"], ["net-common"]),
 ]
 
 # Which exit networks each gateway has a direct leg into.
 GATEWAY_NETWORKS = {
-    "gw-a": ["net-common", "net-lab-a"],
-    "gw-a2": ["net-common", "net-lab-a"],
-    "gw-b": ["net-common", "net-lab-b"],
-    "gw-dc": ["net-dc"],
+    "wdgw-a": ["net-common", "net-lab-a"],
+    "wdgw-a2": ["net-common", "net-lab-a"],
+    "wdgw-b": ["net-common", "net-lab-b"],
+    "relay-dc": ["net-dc"],
 }
 
 # from gateway -> to gateway (directed relay links). Both instances of the
-# gw-a service relay to the DC, so failover preserves DC reachability.
+# wdg-a service relay to the DC, so failover preserves DC reachability.
 RELAY_LINKS = [
-    ("gw-a", "gw-dc"),
-    ("gw-a2", "gw-dc"),
+    ("wdgw-a", "relay-dc"),
+    ("wdgw-a2", "relay-dc"),
 ]
 
 

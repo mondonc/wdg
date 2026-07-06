@@ -4,10 +4,12 @@ Root URLconf, assembled from the *configuration planes* this instance serves
 
 - ``external`` — client-facing: CAS auth + provisioning APIs. The only plane
   exposed to the outside (behind nginx-pq).
-- ``internal`` — Django admin and the gateway sync API. Never exposed
-  externally; the single admin interface lives here.
+- ``internal`` — the gateway/relay sync API: what the fleet pulls its state
+  from. Never exposed externally.
+- ``admin`` — the single Django admin interface (topology & grants). Runs on
+  exactly one instance in the target layout (srv-admin, docs/DAT.md).
 
-The same image runs every role: one deployment can serve both planes (dev,
+The same image runs every role: one deployment can serve all planes (dev,
 small sites), or dedicated instances split them across network exposures.
 Deployment details, including the optional "amont" tier (an additional
 *external*-plane instance published further downstream): docs/DEPLOYMENT.md.
@@ -31,7 +33,9 @@ def plane_urlpatterns(planes):
     if "external" in planes:
         patterns += auth_urlpatterns + client_urlpatterns
     if "internal" in planes:
-        patterns += [path("admin/", admin.site.urls)] + sync_urlpatterns
+        patterns += sync_urlpatterns
+    if "admin" in planes:
+        patterns += [path("admin/", admin.site.urls)]
     return patterns
 
 

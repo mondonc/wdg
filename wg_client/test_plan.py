@@ -5,7 +5,7 @@ import unittest
 from wg_client import plan
 
 PLAN = {
-    "site": "site-a",
+    "site": "centre-a",
     "tunnels": [
         {
             "service": "si-chercheurs",
@@ -13,11 +13,11 @@ PLAN = {
             "allowed_ips": ["172.16.10.0/24", "172.16.20.0/24"],
             "instances": [
                 {
-                    "gateway": "si-a", "site": "site-a", "endpoint": "si-a:51820",
+                    "gateway": "si-a", "site": "centre-a", "endpoint": "si-a:51820",
                     "public_key": "PKA", "address": "10.21.0.2", "preshared_key": "PSKA",
                 },
                 {
-                    "gateway": "si-b", "site": "site-b", "endpoint": "si-b:51820",
+                    "gateway": "si-b", "site": "centre-b", "endpoint": "si-b:51820",
                     "public_key": "PKB", "address": "10.21.1.2", "preshared_key": "PSKB",
                 },
             ],
@@ -28,7 +28,7 @@ PLAN = {
             "allowed_ips": ["0.0.0.0/0"],
             "instances": [
                 {
-                    "gateway": "inet-a", "site": "site-a", "endpoint": "inet-a:51820",
+                    "gateway": "inet-a", "site": "centre-a", "endpoint": "inet-a:51820",
                     "public_key": "PKI", "address": "10.20.0.2", "preshared_key": "PSKI",
                 },
             ],

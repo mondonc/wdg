@@ -65,7 +65,7 @@ All settings come from the environment (see `server/wdg_server/settings.py`):
 | `WDG_CAS_SITE_ATTRIBUTE` | CAS attribute carrying the user's home site/centre (default `ou`) |
 | `WDG_TOKEN_MAX_AGE` | WDG token lifetime, seconds |
 | `WDG_AUTH_CODE_MAX_AGE` | lifetime of the one-time login code, seconds (default 60) |
-| `WDG_PLANES` | configuration planes served by this instance: `external`, `internal`, or both (default) — see below |
+| `WDG_PLANES` | configuration planes served by this instance: any of `external`, `internal`, `admin` (default: all three) — see below |
 | `WDG_MIGRATE` | `1` (default) applies migrations at start; set `0` on every instance but one (or run a dedicated one-shot job) when several instances share the database |
 | `POSTGRES_*` | database connection |
 
@@ -75,27 +75,32 @@ whitenoise, so the internal plane needs nothing in front of it.
 
 ### Configuration planes (`WDG_PLANES`)
 
-The control plane exposes two API surfaces, and each instance declares which
-one(s) it serves; the same image and database back every role:
+The control plane exposes three API surfaces, and each instance declares
+which one(s) it serves; the same image and database back every role:
 
 | Plane | Exposure | Serves |
 |---|---|---|
 | `external` | published to clients (behind nginx-pq) | CAS auth (`/auth/cas/*`, `/api/whoami/`) + client provisioning (`/api/peers/register/`, `/api/config/`, `/api/plan/`, `/api/configs/`) |
-| `internal` | internal networks only | **the single Django admin** (`/admin/`) + gateway sync (`/api/gateways/sync/`) |
+| `internal` | gateways/relays only | gateway sync (`/api/gateways/sync/`) — the fleet's lifeline |
+| `admin` | admin workstations only | **the single Django admin** (`/admin/`) |
 
-`/healthz` is served on every plane. The default (`external,internal`) keeps
-today's single-instance behaviour (dev, small deployments). To split:
+`/healthz` is served on every plane. The default
+(`external,internal,admin`) keeps today's single-instance behaviour (dev,
+small deployments). The target layout (docs/DAT.md) splits:
 
 ```yaml
 control-plane-ext:            # published through nginx-pq
   environment: { WDG_PLANES: external, ... }
-control-plane-int:            # reachable by gateways and admins only
+control-plane-int:            # reachable by gateways and relays only
   environment: { WDG_PLANES: internal, ... }
+control-plane-admin:          # reachable by admin workstations only
+  environment: { WDG_PLANES: admin, ... }
 ```
 
 The admin interface therefore exists in exactly one place, unreachable from
 the outside even if the reverse proxy is misconfigured — the external
-instance simply has no `/admin/` (nor sync) routes.
+instance simply has no `/admin/` (nor sync) routes, and the sync instances
+have no `/admin/` either.
 
 An optional *upstream* ("amont") tier — making client configuration available
 one network further down — is an additional `WDG_PLANES=external` instance

@@ -64,6 +64,9 @@ Une preuve de concept de bout en bout est implémentée et **testée sous Docker
 - [x] Révocation à la désactivation d'un compte/device
 - [x] Transport TLS post-quantique (`X25519MLKEM768`) + interrupteur client `require_pq`
 - [x] Mapping attribut CAS → groupe (+ résilience si attributs non libérés)
+- [x] Plan de contrôle multi-tunnel — sites, services (réservoirs de passerelles), graphe de relais, `/api/plan/` ([design](docs/DESIGN-MULTITUNNEL.md))
+- [x] Passerelles relais — liens WireGuard inter-passerelles, contrôle d'egress à chaque saut, sortie en chaîne (testé : chaîne réelle wdgw-a → relay-dc)
+- [x] Client multi-tunnel — tunnels simultanés depuis `/api/plan/`, bascule à la connexion entre instances d'un service (testé : instance morte et instance muette)
 - [x] Client Python (Linux) — testé de bout en bout
 - [ ] Client Python (macOS / Windows) — code présent, **pas encore validé sur ces OS**
 - [ ] Portail web d'enrôlement *(nice-to-have)*
@@ -77,24 +80,35 @@ Prérequis : Docker + Docker Compose, et un hôte Linux dont le noyau fournit Wi
 
 ```bash
 cd deploy
-docker compose up -d --build          # postgres, mock CAS, control-plane, nginx-pq
-docker compose exec control-plane python manage.py seed_demo
-docker compose exec control-plane python manage.py createsuperuser  # optionnel (admin)
+docker compose up -d --build          # postgres, mock CAS, control-plane ×5 (2 ext + 2 int + admin), nginx-pq
+docker compose exec control-plane-admin python manage.py seed_demo
+docker compose exec control-plane-admin python manage.py createsuperuser  # optionnel (admin)
 ```
 
 Lancer les tests :
 
 ```bash
 # Tests unitaires Django (modèle, résolveur, provisioning, mapping CAS)
-docker compose exec control-plane python manage.py test
+docker compose exec -e WDG_PLANES=external,internal,admin control-plane-admin python manage.py test
 
 # Intégration de bout en bout (login CASv3, provisioning, conf, groupes CAS)
 docker compose run --rm tester
 
-# Tunnel WireGuard réel + cloisonnement par groupe + révocation
-docker compose --profile tunnel up -d --build gw-a exit-target exit-target-b
-docker compose --profile tunnel run --rm \
-  -e USERNAME=alice -e "REACH=http://10.0.0.10:8000,http://192.168.20.10:8000" client-probe
+# Tunnels WireGuard réels : plan multi-tunnel, egress par groupe, chaîne de relais
+docker compose --profile tunnel up -d --build \
+  wdgw-a wdgw-a2 wdgw-b relay-dc exit-target exit-target-b exit-target-dc exit-target-lab-b
+docker compose --profile tunnel run --rm -e USERNAME=alice \
+  -e "REACH=http://10.0.0.10:8000,http://192.168.20.10:8000,http://192.168.30.10:8000,http://192.168.40.10:8000" \
+  client-probe
+
+# Bascule : on arrête l'instance préférée, le client se replie sur wdgw-a2
+docker compose stop wdgw-a
+docker compose --profile tunnel run --rm -e USERNAME=alice \
+  -e "REACH=http://192.168.40.10:8000" -e "EXPECT_VIA=wdg-a=wdgw-a2" client-probe
+docker compose start wdgw-a
+
+# Bascules HA (arrête/redémarre des instances du plan de contrôle, depuis la racine)
+make -C .. e2e-ha
 
 # Transport post-quantique (depuis un hôte avec OpenSSL >= 3.5)
 bash tests/m5_pq_check.sh
@@ -111,8 +125,9 @@ pip install -r wg_client/requirements.txt
 
 python -m wg_client.main configure --server https://vpn.example.com
 python -m wg_client.main login          # SSO, affiche identité + groupes
-python -m wg_client.main connect        # provisionne + monte le tunnel
-python -m wg_client.main status
+python -m wg_client.main connect        # provisionne + monte tous les tunnels du plan
+python -m wg_client.main status         # une ligne par tunnel (service, instance, handshake)
+python -m wg_client.main reconnect      # plan frais : démonte puis remonte tout
 python -m wg_client.main disconnect
 
 # Exiger le TLS post-quantique (échoue si indisponible) :

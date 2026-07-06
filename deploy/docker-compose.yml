@@ -1,11 +1,12 @@
 name: wdg
 
 # The HA layout of docs/DAT.md, scaled down to one compose file: two external
-# and two internal control-plane instances share one PostgreSQL. The DNS
-# aliases `cp-ext` / `cp-int` are carried by both members of each pair —
-# Docker's DNS answers with both IPs (round-robin), standing in for the
-# DNS round-robin / VIP of the real deployment. Exactly one container (the
-# one-shot `migrate` service) applies the schema; instances only wait for it.
+# control-plane instances (clients), two internal ones (gateway/relay sync)
+# and one admin instance (the single Django admin) share one PostgreSQL.
+# The DNS aliases `cp-ext` / `cp-int` are carried by both members of each
+# pair — Docker's DNS answers with both IPs (round-robin), standing in for
+# the DNS round-robin / VIP of the real deployment. Exactly one container
+# (the one-shot `migrate` service) applies the schema; instances wait for it.
 
 x-cp-env: &cp-env
   WDG_SECRET_KEY: dev-insecure-change-me
@@ -98,7 +99,7 @@ services:
       default:
         aliases: [cp-ext]
 
-  # --- internal plane (admin + gateway sync): two instances, cp-int alias ---
+  # --- internal plane (gateway/relay sync only): two instances, cp-int alias
 
   control-plane-int-1:
     <<: *control-plane
@@ -111,8 +112,6 @@ services:
       <<: *cp-env
       WDG_PLANES: internal
       WDG_MIGRATE: "0"
-    ports:
-      - "8000:8000"   # Django admin from the host
     networks:
       default:
         aliases: [cp-int]
@@ -131,6 +130,22 @@ services:
     networks:
       default:
         aliases: [cp-int]
+
+  # --- admin plane: THE single Django admin instance (srv-admin in the DAT) -
+
+  control-plane-admin:
+    <<: *control-plane
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      cas-test:
+        condition: service_started
+    environment:
+      <<: *cp-env
+      WDG_PLANES: admin
+      WDG_MIGRATE: "0"
+    ports:
+      - "8000:8000"   # Django admin from the host
 
   # Post-quantum TLS terminator in front of the external plane (M5).
   # OpenSSL 3.5+ offers X25519MLKEM768; classic clients still fall back.
@@ -182,7 +197,7 @@ services:
       exitnet:
         ipv4_address: 10.0.0.10
 
-  # A second protected network (net-lab-a), served by gw-a but granted only to
+  # A second protected network (net-lab-a), served by wdgw-a but granted only to
   # some groups — used to prove group-scoped egress enforcement.
   exit-target-b:
     image: python:3.13-slim
@@ -192,7 +207,7 @@ services:
       exitnet-b:
         ipv4_address: 192.168.20.10
 
-  gw-a:
+  wdgw-a:
     build: ../gateway
     profiles: ["tunnel"]
     cap_add:
@@ -209,18 +224,18 @@ services:
       # other (deliberately explicit URLs, to exercise the agent-side failover
       # rather than Docker's DNS round-robin).
       WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
-      WDG_GATEWAY_TOKEN: gw-a-sync-secret
+      WDG_GATEWAY_TOKEN: wdgw-a-sync-secret
     volumes:
       # Persistent WireGuard key: the gateway keeps its identity across restarts.
-      - gwa-state:/var/lib/wdg
+      - wdgwa-state:/var/lib/wdg
     networks:
       default: {}
       exitnet: {}
       exitnet-b: {}
 
-  # Site-b instance of the "gw-a" service: same legs and relay link as gw-a.
-  # Clients prefer gw-a (their site) and fail over here when it is down.
-  gw-a2:
+  # Site-b instance of the "wdgw-a" service: same legs and relay link as wdgw-a.
+  # Clients prefer wdgw-a (their site) and fail over here when it is down.
+  wdgw-a2:
     build: ../gateway
     profiles: ["tunnel"]
     cap_add:
@@ -234,16 +249,16 @@ services:
         condition: service_healthy
     environment:
       WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
-      WDG_GATEWAY_TOKEN: gw-a2-sync-secret
+      WDG_GATEWAY_TOKEN: wdgw-a2-sync-secret
     volumes:
-      - gwa2-state:/var/lib/wdg
+      - wdgwa2-state:/var/lib/wdg
     networks:
       default: {}
       exitnet: {}
       exitnet-b: {}
 
-  # Single instance of the gw-b service (net-common + net-lab-b legs).
-  gw-b:
+  # Single instance of the wdgw-b service (net-common + net-lab-b legs).
+  wdgw-b:
     build: ../gateway
     profiles: ["tunnel"]
     cap_add:
@@ -257,15 +272,15 @@ services:
         condition: service_healthy
     environment:
       WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
-      WDG_GATEWAY_TOKEN: gw-b-sync-secret
+      WDG_GATEWAY_TOKEN: wdgw-b-sync-secret
     volumes:
-      - gwb-state:/var/lib/wdg
+      - wdgwb-state:/var/lib/wdg
     networks:
       default: {}
       exitnet: {}
       exitnet-lab-b: {}
 
-  # Lab B's service: reachable only through the gw-b tunnel (second
+  # Lab B's service: reachable only through the wdgw-b tunnel (second
   # simultaneous tunnel of the multi-tunnel client).
   exit-target-lab-b:
     image: python:3.13-slim
@@ -276,8 +291,8 @@ services:
         ipv4_address: 192.168.30.10
 
   # Relay-only gateway (service dc-access): no direct clients, reached through
-  # gw-a over an inter-gateway WireGuard link. Its only leg is the DC network.
-  gw-dc:
+  # wdgw-a over an inter-gateway WireGuard link. Its only leg is the DC network.
+  relay-dc:
     build: ../gateway
     profiles: ["tunnel"]
     cap_add:
@@ -291,14 +306,14 @@ services:
         condition: service_healthy
     environment:
       WDG_CONTROL_PLANE: http://control-plane-int-1:8000,http://control-plane-int-2:8000
-      WDG_GATEWAY_TOKEN: gw-dc-sync-secret
+      WDG_GATEWAY_TOKEN: relay-dc-sync-secret
     volumes:
-      - gwdc-state:/var/lib/wdg
+      - relaydc-state:/var/lib/wdg
     networks:
       default: {}
       exitnet-dc: {}
 
-  # A service on the DC network: reachable only through the gw-a → gw-dc chain.
+  # A service on the DC network: reachable only through the wdgw-a → relay-dc chain.
   exit-target-dc:
     image: python:3.13-slim
     profiles: ["tunnel"]
@@ -308,7 +323,7 @@ services:
         ipv4_address: 192.168.40.10
 
   # On-demand: runs the full client flow and probes the exit target through
-  # a real WireGuard tunnel to gw-a. `docker compose run --rm client-probe`.
+  # a real WireGuard tunnel to wdgw-a. `docker compose run --rm client-probe`.
   client-probe:
     build:
       # Repo-root context: the probe drives the real wg_client code.
@@ -350,7 +365,7 @@ networks:
 
 volumes:
   pgdata:
-  gwa-state:
-  gwa2-state:
-  gwb-state:
-  gwdc-state:
+  wdgwa-state:
+  wdgwa2-state:
+  wdgwb-state:
+  relaydc-state:

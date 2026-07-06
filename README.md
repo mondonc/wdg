@@ -65,7 +65,7 @@ An end-to-end proof of concept is implemented and **tested in Docker** (Linux da
 - [x] Post-quantum TLS transport (`X25519MLKEM768`) + `require_pq` client switch
 - [x] CAS attribute → group mapping (+ resilience to un-released attributes)
 - [x] Multi-tunnel control plane — sites, services (gateway pools), relay graph, `/api/plan/` ([design](docs/DESIGN-MULTITUNNEL.md))
-- [x] Relay gateways — inter-gateway WireGuard links, per-hop egress enforcement, chained exit (tested: real gw-a → gw-dc chain)
+- [x] Relay gateways — inter-gateway WireGuard links, per-hop egress enforcement, chained exit (tested: real wdgw-a → relay-dc chain)
 - [x] Multi-tunnel client — simultaneous tunnels from `/api/plan/`, connect-time failover between a service's instances (tested: instance down and instance unresponsive)
 - [x] Python client (Linux) — tested end-to-end
 - [ ] Python client (macOS / Windows) — code present, **not yet validated on those OSes**
@@ -80,32 +80,35 @@ Requirements: Docker + Docker Compose, and a Linux host whose kernel provides Wi
 
 ```bash
 cd deploy
-docker compose up -d --build          # postgres, mock CAS, control-plane, nginx-pq
-docker compose exec control-plane python manage.py seed_demo
-docker compose exec control-plane python manage.py createsuperuser  # optional (admin UI)
+docker compose up -d --build          # postgres, mock CAS, control-plane ×5 (2 ext + 2 int + admin), nginx-pq
+docker compose exec control-plane-admin python manage.py seed_demo
+docker compose exec control-plane-admin python manage.py createsuperuser  # optional (admin UI)
 ```
 
 Run the test suites:
 
 ```bash
 # Django unit tests (model, resolver, provisioning, CAS mapping)
-docker compose exec control-plane python manage.py test
+docker compose exec -e WDG_PLANES=external,internal,admin control-plane-admin python manage.py test
 
 # End-to-end integration (CASv3 login, provisioning, config, CAS groups)
 docker compose run --rm tester
 
 # Real WireGuard tunnels: multi-tunnel plan, group-scoped egress, relay chain
 docker compose --profile tunnel up -d --build \
-  gw-a gw-a2 gw-b gw-dc exit-target exit-target-b exit-target-dc exit-target-lab-b
+  wdgw-a wdgw-a2 wdgw-b relay-dc exit-target exit-target-b exit-target-dc exit-target-lab-b
 docker compose --profile tunnel run --rm -e USERNAME=alice \
   -e "REACH=http://10.0.0.10:8000,http://192.168.20.10:8000,http://192.168.30.10:8000,http://192.168.40.10:8000" \
   client-probe
 
-# Failover: stop the preferred instance, the client falls back to gw-a2
-docker compose stop gw-a
+# Failover: stop the preferred instance, the client falls back to wdgw-a2
+docker compose stop wdgw-a
 docker compose --profile tunnel run --rm -e USERNAME=alice \
-  -e "REACH=http://192.168.40.10:8000" -e "EXPECT_VIA=gw-a=gw-a2" client-probe
-docker compose start gw-a
+  -e "REACH=http://192.168.40.10:8000" -e "EXPECT_VIA=wdg-a=wdgw-a2" client-probe
+docker compose start wdgw-a
+
+# HA failover (stops/restarts control-plane instances, run from repo root)
+make -C .. e2e-ha
 
 # Post-quantum transport (run from a host with OpenSSL >= 3.5)
 bash tests/m5_pq_check.sh

@@ -19,20 +19,28 @@ class PlaneSplitTests(TestCase):
         self.assertNotIn("api/gateways/sync/", routes)
         self.assertNotIn("admin/", routes)
 
-    def test_internal_plane_has_no_client_surface(self):
+    def test_internal_plane_serves_sync_only(self):
         routes = _routes(plane_urlpatterns(["internal"]))
         self.assertIn("api/gateways/sync/", routes)
+        self.assertNotIn("admin/", routes)
+        self.assertNotIn("auth/cas/login", routes)
+        self.assertNotIn("api/peers/register/", routes)
+
+    def test_admin_plane_serves_only_the_admin(self):
+        routes = _routes(plane_urlpatterns(["admin"]))
         self.assertIn("admin/", routes)
+        self.assertNotIn("api/gateways/sync/", routes)
         self.assertNotIn("auth/cas/login", routes)
         self.assertNotIn("api/peers/register/", routes)
 
     def test_healthz_is_on_every_plane(self):
-        for planes in (["external"], ["internal"], ["external", "internal"]):
+        for planes in (["external"], ["internal"], ["admin"],
+                       ["external", "internal", "admin"]):
             self.assertIn("healthz", _routes(plane_urlpatterns(planes)))
 
-    def test_default_serves_both_planes(self):
-        # The dev/demo stack keeps today's behaviour: everything on one port.
-        routes = _routes(plane_urlpatterns(["external", "internal"]))
+    def test_default_serves_every_plane(self):
+        # The dev/demo single-instance behaviour: everything on one port.
+        routes = _routes(plane_urlpatterns(["external", "internal", "admin"]))
         for expected in ("auth/cas/login", "api/peers/register/",
                          "api/gateways/sync/", "admin/"):
             self.assertIn(expected, routes)

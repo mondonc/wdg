@@ -76,9 +76,9 @@ class AccessResolutionTests(SeededTestCase):
         alice = User.objects.create(username="alice")
         sync.sync_membership(alice, ["vpn-users", "vpn-admins", "research-lab-a"])
         access = resolve.access_for_user(alice)
-        # gw-dc is relay-only (accepts_clients=False): never a client gateway.
+        # relay-dc is relay-only (accepts_clients=False): never a client gateway.
         self.assertEqual(
-            sorted(g.name for g in access["gateways"]), ["gw-a", "gw-a2", "gw-b"]
+            sorted(g.name for g in access["gateways"]), ["wdgw-a", "wdgw-a2", "wdgw-b"]
         )
         self.assertEqual(
             sorted(resolve.allowed_ips_for_user(alice)),
@@ -90,7 +90,7 @@ class AccessResolutionTests(SeededTestCase):
         sync.sync_membership(bob, ["vpn-users", "research-lab-b"])
         access = resolve.access_for_user(bob)
         self.assertEqual(
-            sorted(g.name for g in access["gateways"]), ["gw-a", "gw-a2", "gw-b"]
+            sorted(g.name for g in access["gateways"]), ["wdgw-a", "wdgw-a2", "wdgw-b"]
         )
         self.assertEqual(
             sorted(resolve.allowed_ips_for_user(bob)),
@@ -108,18 +108,18 @@ class AccessResolutionTests(SeededTestCase):
     def test_inactive_gateway_is_excluded(self):
         alice = User.objects.create(username="alice")
         sync.sync_membership(alice, ["vpn-admins"])
-        Gateway.objects.filter(name="gw-b").update(is_active=False)
+        Gateway.objects.filter(name="wdgw-b").update(is_active=False)
         access = resolve.access_for_user(alice)
-        self.assertEqual([g.name for g in access["gateways"]], ["gw-a", "gw-a2"])
+        self.assertEqual([g.name for g in access["gateways"]], ["wdgw-a", "wdgw-a2"])
 
 
 class PerGatewayScopingTests(SeededTestCase):
     def test_networks_are_scoped_to_the_gateway(self):
         alice = User.objects.create(username="alice")
         sync.sync_membership(alice, ["vpn-users", "vpn-admins", "research-lab-a"])
-        gw_a = Gateway.objects.get(name="gw-a")
-        gw_b = Gateway.objects.get(name="gw-b")
-        # gw-a routes net-common + net-lab-a; net-lab-b is only behind gw-b.
+        gw_a = Gateway.objects.get(name="wdgw-a")
+        gw_b = Gateway.objects.get(name="wdgw-b")
+        # wdgw-a routes net-common + net-lab-a; net-lab-b is only behind wdgw-b.
         self.assertEqual(
             sorted(resolve.allowed_ips_for_user(alice, gw_a)),
             ["10.0.0.0/24", "192.168.20.0/24"],
@@ -132,9 +132,9 @@ class PerGatewayScopingTests(SeededTestCase):
     def test_gateway_only_exposes_networks_the_user_is_granted(self):
         bob = User.objects.create(username="bob")
         sync.sync_membership(bob, ["vpn-users", "research-lab-b"])
-        gw_a = Gateway.objects.get(name="gw-a")
-        # bob is granted net-common + net-lab-b; via gw-a only net-common applies
-        # (gw-a doesn't route net-lab-b, and bob lacks net-lab-a).
+        gw_a = Gateway.objects.get(name="wdgw-a")
+        # bob is granted net-common + net-lab-b; via wdgw-a only net-common applies
+        # (wdgw-a doesn't route net-lab-b, and bob lacks net-lab-a).
         self.assertEqual(resolve.allowed_ips_for_user(bob, gw_a), ["10.0.0.0/24"])
 
 
@@ -142,12 +142,12 @@ class SiteMappingTests(SeededTestCase):
     def test_site_set_from_cas_value(self):
         user = User.objects.create(username="alice")
         site = sync.sync_site(user, ["centre-a"])
-        self.assertEqual(site.name, "site-a")
-        self.assertEqual(resolve.user_site(user).name, "site-a")
+        self.assertEqual(site.name, "centre-a")
+        self.assertEqual(resolve.user_site(user).name, "centre-a")
 
     def test_site_name_matches_too(self):
         user = User.objects.create(username="bob")
-        self.assertEqual(sync.sync_site(user, ["site-b"]).name, "site-b")
+        self.assertEqual(sync.sync_site(user, ["centre-b"]).name, "centre-b")
 
     def test_unknown_value_is_ignored_never_autocreated(self):
         user = User.objects.create(username="carol")
@@ -157,8 +157,8 @@ class SiteMappingTests(SeededTestCase):
 
     def test_empty_release_preserves_manual_assignment(self):
         user = User.objects.create(username="manual")
-        UserProfile.objects.create(user=user, site=Site.objects.get(name="site-a"))
-        self.assertEqual(sync.sync_site(user, []).name, "site-a")
+        UserProfile.objects.create(user=user, site=Site.objects.get(name="centre-a"))
+        self.assertEqual(sync.sync_site(user, []).name, "centre-a")
 
 
 class RelayTopologyTestCase(TestCase):
@@ -170,8 +170,8 @@ class RelayTopologyTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.site_a = Site.objects.create(name="site-a", cas_values=["centre-a"])
-        cls.site_b = Site.objects.create(name="site-b", cas_values=["centre-b"])
+        cls.site_a = Site.objects.create(name="centre-a", cas_values=["centre-a"])
+        cls.site_b = Site.objects.create(name="centre-b", cas_values=["centre-b"])
 
         cls.svc_inet = Service.objects.create(name="internet-egress", default_route=True)
         cls.svc_si = Service.objects.create(name="si-chercheurs")
@@ -400,8 +400,8 @@ class TopologyExportTests(SeededTestCase):
     def test_dot_contains_sites_gateways_relays_and_legend(self):
         dot = self._export("dot")
         self.assertIn("digraph wdg", dot)
-        self.assertIn("site-a", dot)
-        self.assertIn("gw-a:51820", dot)
+        self.assertIn("centre-a", dot)
+        self.assertIn("wdgw-a:51820", dot)
         self.assertIn('label="relay"', dot)
         self.assertIn("relay-only", dot)  # legend flag for dc-access
 
@@ -411,7 +411,7 @@ class TopologyExportTests(SeededTestCase):
                         "## Relay links", "## Networks", "## Group grants"]:
             self.assertIn(heading, md)
         self.assertIn("10.10.0.0/24", md)
-        self.assertIn("| gw-a | gw-dc |", md)
+        self.assertIn("| wdgw-a | relay-dc |", md)
 
 
 class GatewayValidationTests(SeededTestCase):
@@ -427,23 +427,23 @@ class GatewayValidationTests(SeededTestCase):
     def test_overlapping_subnet_is_rejected(self):
         from django.core.exceptions import ValidationError
 
-        # 10.10.0.0/16 covers gw-a's 10.10.0.0/24.
+        # 10.10.0.0/16 covers wdgw-a's 10.10.0.0/24.
         with self.assertRaises(ValidationError):
             self._gateway("10.10.0.0/16").clean()
         with self.assertRaises(ValidationError):
-            self._gateway("10.10.1.128/25").clean()  # inside gw-b's /24
+            self._gateway("10.10.1.128/25").clean()  # inside wdgw-b's /24
 
     def test_disjoint_subnet_is_accepted(self):
         self._gateway("10.99.0.0/24").clean()
 
     def test_editing_own_subnet_does_not_self_conflict(self):
-        gw = Gateway.objects.get(name="gw-a")
+        gw = Gateway.objects.get(name="wdgw-a")
         gw.clean()
 
 
 class AddressAllocationTests(SeededTestCase):
     def test_allocation_skips_gateway_ip_and_avoids_collisions(self):
-        gw = Gateway.objects.get(name="gw-a")
+        gw = Gateway.objects.get(name="wdgw-a")
         user = User.objects.create(username="alice")
         first = resolve.allocate_address(gw)
         self.assertEqual(first, "10.10.0.2")  # .1 reserved for the gateway

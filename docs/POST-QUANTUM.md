@@ -43,7 +43,8 @@ fall back to classic X25519 transparently.
 
 The server is authoritative because it *knows* the negotiated group
 (`$ssl_curve`). Setting `REQUIRE_PQ=on` makes the sensitive endpoints
-(`/api/config/`, `/api/peers/register/`) refuse a non-PQ connection with **HTTP
+(`/api/peers/register/`, `/api/config/`, `/api/plan/` — everything that
+delivers keys or PSKs) refuse a non-PQ connection with **HTTP
 421** before serving anything, while leaving the login/enrollment path open in
 classic so users aren't locked out:
 
@@ -51,7 +52,7 @@ classic so users aren't locked out:
 map $ssl_curve $pq_ok { default 0; X25519MLKEM768 1; }
 location = /api/config/ {
     if ($pq_ok = 0) { return 421; }   # injected only when REQUIRE_PQ=on
-    proxy_pass http://control-plane:8000;
+    proxy_pass http://${UPSTREAM};   # default control-plane:8000
 }
 ```
 

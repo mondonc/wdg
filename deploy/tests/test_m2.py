@@ -45,27 +45,27 @@ def api(token):
 
 
 def main() -> int:
-    # alice: admin; provisioned on both gateways. Primary (gw-a) conf carries
-    # only what gw-a routes and she is granted: net-common + net-lab-a.
+    # alice: admin; provisioned on both gateways. Primary (wdgw-a) conf carries
+    # only what wdgw-a routes and she is granted: net-common + net-lab-a.
     s = api(login_as("alice"))
     reg = s.post(f"{CONTROL_PLANE}/api/peers/register/", json={"public_key": fake_wg_key()}, timeout=15)
     assert reg.status_code == 200, (reg.status_code, reg.text)
-    assert sorted(d["gateway"] for d in reg.json()["devices"]) == ["gw-a", "gw-a2", "gw-b"], reg.json()
+    assert sorted(d["gateway"] for d in reg.json()["devices"]) == ["wdgw-a", "wdgw-a2", "wdgw-b"], reg.json()
     conf = s.get(f"{CONTROL_PLANE}/api/config/", timeout=15).text
     assert "PrivateKey = __PRIVATE_KEY__" in conf
-    assert "Endpoint = gw-a:51820" in conf
+    assert "Endpoint = wdgw-a:51820" in conf
     assert "10.0.0.0/24" in conf and "192.168.20.0/24" in conf, conf
-    assert "192.168.30.0/24" not in conf, "net-lab-b is behind gw-b, not gw-a"
-    print("  ✓ alice: provisioned on gw-a+gw-b; gw-a conf scoped to its networks")
+    assert "192.168.30.0/24" not in conf, "net-lab-b is behind wdgw-b, not wdgw-a"
+    print("  ✓ alice: provisioned on wdgw-a+wdgw-b; wdgw-a conf scoped to its networks")
 
-    # bob: via gw-a only net-common; net-lab-b appears only via gw-b.
+    # bob: via wdgw-a only net-common; net-lab-b appears only via wdgw-b.
     s = api(login_as("bob"))
     s.post(f"{CONTROL_PLANE}/api/peers/register/", json={"public_key": fake_wg_key()}, timeout=15).raise_for_status()
     conf_a = s.get(f"{CONTROL_PLANE}/api/config/", timeout=15).text
     assert "10.0.0.0/24" in conf_a and "192.168.30.0/24" not in conf_a, conf_a
-    conf_b = s.get(f"{CONTROL_PLANE}/api/config/?gateway=gw-b", timeout=15).text
-    assert "Endpoint = gw-b:51820" in conf_b and "192.168.30.0/24" in conf_b, conf_b
-    print("  ✓ bob: gw-a conf = net-common; gw-b conf adds net-lab-b")
+    conf_b = s.get(f"{CONTROL_PLANE}/api/config/?gateway=wdgw-b", timeout=15).text
+    assert "Endpoint = wdgw-b:51820" in conf_b and "192.168.30.0/24" in conf_b, conf_b
+    print("  ✓ bob: wdgw-a conf = net-common; wdgw-b conf adds net-lab-b")
 
     # carol: no groups -> no access
     s = api(login_as("carol"))

@@ -119,15 +119,18 @@ obligatoire dans le modèle.)*
 
 ### Architecture d'exposition (rappel des principes cibles)
 
-- **Une seule interface d'admin Django**, accessible uniquement en interne :
-  l'instance externe du plan de contrôle ne route même pas `/admin/`.
+- **Une seule interface d'admin Django** (le serveur `srv-admin`), joignable
+  des seuls postes d'administration : les autres instances du plan de
+  contrôle ne routent même pas `/admin/`.
 - **Planes de configuration multiples** — la même image sert un ou plusieurs
   planes selon `WDG_PLANES` :
 
 | Plane | Exposition | Usage |
 |---|---|---|
 | externe | ouverte sur l'extérieur | configuration côté clients (auth CAS + provisioning) |
-| interne | interne uniquement | admin Django + sync des passerelles |
+| interne | interne uniquement | sync des passerelles et relais |
+| admin | postes d'administration | l'unique interface d'admin Django |
 | amont *(optionnel)* | tiers intermédiaire | instance `external` supplémentaire publiée plus loin en aval |
 
-Détails et exemple de découpage : [DEPLOYMENT.md — Configuration planes](DEPLOYMENT.md#configuration-planes-wdg_planes).
+Détails et exemple de découpage : [DEPLOYMENT.md — Configuration planes](DEPLOYMENT.md#configuration-planes-wdg_planes),
+et le déploiement cible complet dans le [DAT](DAT.md).

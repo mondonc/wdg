@@ -1,8 +1,8 @@
 """
 M8 end-to-end: multi-tunnel plan API + CAS site mapping.
 
-alice (CAS ou=centre-a) must land on site-a, and her plan must contain the
-gw-a and gw-b tunnels with disjoint AllowedIPs and per-instance credentials.
+alice (CAS ou=centre-a) must land on centre-a, and her plan must contain the
+wdg-a and wdg-b tunnels with disjoint AllowedIPs and per-instance credentials.
 """
 
 import base64
@@ -49,7 +49,7 @@ def main() -> int:
     s = api(login_as("alice"))
 
     who = s.get(f"{CONTROL_PLANE}/api/whoami/", timeout=15).json()
-    assert who["site"] == "site-a", f"CAS ou=centre-a should map to site-a: {who}"
+    assert who["site"] == "centre-a", f"CAS ou=centre-a should map to centre-a: {who}"
     print(f"  ✓ alice: CAS site attribute mapped to {who['site']}")
 
     s.post(
@@ -59,18 +59,18 @@ def main() -> int:
     ).raise_for_status()
 
     plan = s.get(f"{CONTROL_PLANE}/api/plan/", timeout=15).json()
-    assert plan["site"] == "site-a", plan
+    assert plan["site"] == "centre-a", plan
     by_service = {t["service"]: t for t in plan["tunnels"]}
-    assert set(by_service) == {"gw-a", "gw-b"}, plan
+    assert set(by_service) == {"wdg-a", "wdg-b"}, plan
 
-    # Disjoint partition: the shared net-common is claimed by gw-a only, and
-    # the relayed net-dc rides the gw-a tunnel (gw-a → gw-dc chain).
-    a_ips = set(by_service["gw-a"]["allowed_ips"])
-    b_ips = set(by_service["gw-b"]["allowed_ips"])
+    # Disjoint partition: the shared net-common is claimed by wdg-a only, and
+    # the relayed net-dc rides the wdg-a tunnel (wdgw-a → relay-dc chain).
+    a_ips = set(by_service["wdg-a"]["allowed_ips"])
+    b_ips = set(by_service["wdg-b"]["allowed_ips"])
     assert a_ips == {"10.0.0.0/24", "192.168.20.0/24", "192.168.40.0/24"}, a_ips
     assert b_ips == {"192.168.30.0/24"}, b_ips
     assert not (a_ips & b_ips)
-    print("  ✓ alice: plan tunnels gw-a/gw-b with disjoint AllowedIPs")
+    print("  ✓ alice: plan tunnels wdg-a/wdg-b with disjoint AllowedIPs")
 
     for tunnel in plan["tunnels"]:
         for inst in tunnel["instances"]:
@@ -80,7 +80,7 @@ def main() -> int:
     # bob is at centre-b.
     s = api(login_as("bob"))
     who = s.get(f"{CONTROL_PLANE}/api/whoami/", timeout=15).json()
-    assert who["site"] == "site-b", who
+    assert who["site"] == "centre-b", who
     print(f"  ✓ bob: CAS site attribute mapped to {who['site']}")
 
     print("M8 e2e: PASS")

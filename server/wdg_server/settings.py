@@ -31,15 +31,18 @@ ALLOWED_HOSTS = _env_list("WDG_ALLOWED_HOSTS", "*") or ["*"]
 # --- Configuration planes ---------------------------------------------------
 # Which API surfaces this instance serves (see wdg_server.urls):
 #   external  client-facing plane (CAS auth + provisioning), exposed outside
-#   internal  Django admin + gateway sync API, internal networks only
-# One instance may serve both (default, dev) or a single plane, so the same
-# image can be deployed once per exposure. /healthz is served on every plane.
-WDG_PLANES = _env_list("WDG_PLANES", "external,internal")
+#   internal  gateway/relay sync API — the fleet's lifeline, never exposed
+#   admin     the single Django admin interface (srv-admin in docs/DAT.md)
+# One instance may serve any combination (dev default: all three), so the
+# same image can be deployed once per role. /healthz is on every plane.
+WDG_PLANES = _env_list("WDG_PLANES", "external,internal,admin")
 if not WDG_PLANES:
     # An empty value would boot a healthz-only instance that monitoring
     # reports as healthy while every real route 404s — refuse to start.
-    raise ImproperlyConfigured("WDG_PLANES must list at least one of: external, internal")
-_unknown_planes = set(WDG_PLANES) - {"external", "internal"}
+    raise ImproperlyConfigured(
+        "WDG_PLANES must list at least one of: external, internal, admin"
+    )
+_unknown_planes = set(WDG_PLANES) - {"external", "internal", "admin"}
 if _unknown_planes:
     raise ImproperlyConfigured(f"WDG_PLANES: unknown plane(s) {sorted(_unknown_planes)}")
 

@@ -22,14 +22,14 @@ class ProvisioningTests(TestCase):
         alice = self._user("alice", ["vpn-users", "vpn-admins", "research-lab-a"])
         devices = service.register_devices(alice, "PUBKEY_ALICE")
         # Every active instance of every granted entry service.
-        self.assertEqual(sorted(d.gateway.name for d in devices), ["gw-a", "gw-a2", "gw-b"])
+        self.assertEqual(sorted(d.gateway.name for d in devices), ["wdgw-a", "wdgw-a2", "wdgw-b"])
         # First host of each subnet is the gateway; devices start at .2.
         self.assertEqual({d.gateway.name: d.address for d in devices},
-                         {"gw-a": "10.10.0.2", "gw-a2": "10.10.3.2", "gw-b": "10.10.1.2"})
+                         {"wdgw-a": "10.10.0.2", "wdgw-a2": "10.10.3.2", "wdgw-b": "10.10.1.2"})
 
     def test_register_is_idempotent_and_rotates_key(self):
-        alice = self._user("alice", ["vpn-users"])  # service gw-a (2 instances)
-        d1 = service.register_devices(alice, "KEY_1")[0]  # gw-a first by name
+        alice = self._user("alice", ["vpn-users"])  # service wdg-a (2 instances)
+        d1 = service.register_devices(alice, "KEY_1")[0]  # wdgw-a first by name
         addr, psk = d1.address, d1.preshared_key
         d2 = service.register_devices(alice, "KEY_2")[0]
         self.assertEqual(Device.objects.filter(user=alice).count(), 2)
@@ -63,14 +63,14 @@ class ProvisioningTests(TestCase):
         plan = resp.json()
 
         by_service = {t["service"]: t for t in plan["tunnels"]}
-        self.assertEqual(set(by_service), {"gw-a", "gw-b"})
-        # gw-a (first in order) claims the shared network and carries the
-        # relayed net-dc; gw-b only routes what is left — no overlap.
+        self.assertEqual(set(by_service), {"wdg-a", "wdg-b"})
+        # wdg-a (first in order) claims the shared network and carries the
+        # relayed net-dc; wdg-b only routes what is left — no overlap.
         self.assertEqual(
-            sorted(by_service["gw-a"]["allowed_ips"]),
+            sorted(by_service["wdg-a"]["allowed_ips"]),
             ["10.0.0.0/24", "192.168.20.0/24", "192.168.40.0/24"],
         )
-        self.assertEqual(by_service["gw-b"]["allowed_ips"], ["192.168.30.0/24"])
+        self.assertEqual(by_service["wdg-b"]["allowed_ips"], ["192.168.30.0/24"])
         for tunnel in plan["tunnels"]:
             for instance in tunnel["instances"]:
                 self.assertIsNotNone(instance["address"])
@@ -121,7 +121,7 @@ class ProvisioningTests(TestCase):
     def test_sync_reports_the_gateway_listen_port(self):
         from core.models import Gateway
 
-        gw_a = Gateway.objects.get(name="gw-a")
+        gw_a = Gateway.objects.get(name="wdgw-a")
         resp = self.client.post(
             "/api/gateways/sync/", data="{}", content_type="application/json",
             HTTP_AUTHORIZATION=f"Bearer {gw_a.sync_token}",
@@ -144,12 +144,12 @@ class ProvisioningTests(TestCase):
 
         bob = self._user("bob", ["vpn-users", "research-lab-b"])
         service.register_devices(bob, "KEY_BOB")
-        gw_a = Gateway.objects.get(name="gw-a")
+        gw_a = Gateway.objects.get(name="wdgw-a")
         device = Device.objects.get(user=bob, gateway=gw_a)
         conf = wgconf.build_config(device, gw_a, resolve.allowed_ips_for_user(bob, gw_a))
         self.assertIn("PrivateKey = __PRIVATE_KEY__", conf)
         self.assertIn(f"PresharedKey = {device.preshared_key}", conf)
-        self.assertIn("Endpoint = gw-a:51820", conf)
-        self.assertIn("10.0.0.0/24", conf)         # net-common (served by gw-a)
-        self.assertNotIn("192.168.30.0/24", conf)  # net-lab-b is behind gw-b
+        self.assertIn("Endpoint = wdgw-a:51820", conf)
+        self.assertIn("10.0.0.0/24", conf)         # net-common (served by wdgw-a)
+        self.assertNotIn("192.168.30.0/24", conf)  # net-lab-b is behind wdgw-b
         self.assertNotIn("192.168.20.0/24", conf)  # lab A not granted to bob

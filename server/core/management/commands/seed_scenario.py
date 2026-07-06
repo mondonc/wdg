@@ -54,8 +54,8 @@ SCENARIOS["sans-wdg"] = {
         # boxes have no WireGuard overlay)
         ("dgtw-a", "dgtw-direct-a", "centre-a", "dgtw-a.example.org", "172.31.1.0/24"),
         ("dgtw-b", "dgtw-direct-b", "centre-b", "dgtw-b.example.org", "172.31.2.0/24"),
-        ("vpn-gw-a", "vpn-a", "centre-a", "vpn-a.example.org:1701", "172.31.3.0/24"),
-        ("vpn-gw-b", "vpn-b", "centre-b", "vpn-b.example.org:1701", "172.31.4.0/24"),
+        ("vpn-wdgw-a", "vpn-a", "centre-a", "vpn-a.example.org:1701", "172.31.3.0/24"),
+        ("vpn-wdgw-b", "vpn-b", "centre-b", "vpn-b.example.org:1701", "172.31.4.0/24"),
         ("rdp-a", "bastion-rdp-a", "centre-a", "rdp-a.example.org:3389", "172.31.5.0/24"),
         ("rdp-dc", "bastion-rdp-dc", "datacenter", "rdp-dc.example.org:3389", "172.31.6.0/24"),
     ],
@@ -71,8 +71,8 @@ SCENARIOS["sans-wdg"] = {
     "gateway_networks": {
         "dgtw-a": ["vlan-users-a", "vlan-metier"],
         "dgtw-b": ["vlan-users-b", "vlan-metier"],
-        "vpn-gw-a": ["vlan-users-a", "vlan-metier"],
-        "vpn-gw-b": ["vlan-users-b", "vlan-metier"],
+        "vpn-wdgw-a": ["vlan-users-a", "vlan-metier"],
+        "vpn-wdgw-b": ["vlan-users-b", "vlan-metier"],
         "rdp-a": ["vlan-admin-a"],
         "rdp-dc": ["vlan-admin-dc"],
     },
@@ -98,16 +98,16 @@ SCENARIOS["avec-wdg"] = {
     "services": [
         ("wdg-users", "Réservoir utilisateurs (failover par centre)", True, False),
         ("wdg-admins", "Réservoir admins (failover par centre)", True, False),
-        ("relais-admin", "Relais vers les VLANs d'admin", False, False),
+        ("relay-admin", "Relais vers les VLANs d'admin", False, False),
     ],
     "gateways": [
         ("gw-users-a", "wdg-users", "centre-a", "gw-users-a.vpn.example.org:51820", "10.10.10.0/24"),
         ("gw-users-b", "wdg-users", "centre-b", "gw-users-b.vpn.example.org:51820", "10.10.20.0/24"),
         ("gw-admins-a", "wdg-admins", "centre-a", "gw-admins-a.vpn.example.org:51820", "10.10.11.0/24"),
         ("gw-admins-b", "wdg-admins", "centre-b", "gw-admins-b.vpn.example.org:51820", "10.10.21.0/24"),
-        ("relay-admin-a", "relais-admin", "centre-a", "relay-admin-a.vpn.example.org:51820", "10.10.12.0/24"),
-        ("relay-admin-b", "relais-admin", "centre-b", "relay-admin-b.vpn.example.org:51820", "10.10.22.0/24"),
-        ("relay-admin-dc", "relais-admin", "datacenter", "relay-admin-dc.vpn.example.org:51820", "10.10.40.0/24"),
+        ("relay-admin-a", "relay-admin", "centre-a", "relay-admin-a.vpn.example.org:51820", "10.10.12.0/24"),
+        ("relay-admin-b", "relay-admin", "centre-b", "relay-admin-b.vpn.example.org:51820", "10.10.22.0/24"),
+        ("relay-admin-dc", "relay-admin", "datacenter", "relay-admin-dc.vpn.example.org:51820", "10.10.40.0/24"),
     ],
     "networks": [
         ("vlan-users-a", "10.20.10.0/24", "VLAN utilisateurs centre A"),
@@ -126,18 +126,21 @@ SCENARIOS["avec-wdg"] = {
         "relay-admin-b": ["vlan-admin-b"],
         "relay-admin-dc": ["vlan-admin-dc"],
     },
-    # Both admin entry points reach every admin relay: whichever instance a
-    # client fails over to, the admin VLANs stay reachable.
+    # Both admin entry points reach EVERY admin relay (full mesh): whichever
+    # centre an admin enters through, all admin VLANs stay reachable — the
+    # per-centre silo really disappears (SCENARIOS.md's promise).
     "relay_links": [
         ("gw-admins-a", "relay-admin-a"),
+        ("gw-admins-a", "relay-admin-b"),
         ("gw-admins-a", "relay-admin-dc"),
+        ("gw-admins-b", "relay-admin-a"),
         ("gw-admins-b", "relay-admin-b"),
         ("gw-admins-b", "relay-admin-dc"),
     ],
     "groups": [
         ("utilisateurs", ["vpn-users"], ["wdg-users"],
          ["vlan-users-a", "vlan-users-b", "vlan-metier"]),
-        ("admins", ["vpn-admins"], ["wdg-admins", "relais-admin"],
+        ("admins", ["vpn-admins"], ["wdg-admins", "relay-admin"],
          ["vlan-metier", "vlan-admin-a", "vlan-admin-b", "vlan-admin-dc"]),
     ],
 }

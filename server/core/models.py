@@ -72,7 +72,7 @@ class Gateway(models.Model):
     site = models.ForeignKey(
         Site, on_delete=models.SET_NULL, related_name="gateways", null=True, blank=True
     )
-    # Public [Peer] Endpoint the client dials, e.g. "gw-a.vpn.example.com:51820".
+    # Public [Peer] Endpoint the client dials, e.g. "gw-users-a.vpn.example.org:51820".
     endpoint = models.CharField(max_length=255)
     public_key = models.CharField(max_length=64, blank=True)
     # Tunnel subnet from which client addresses are allocated, e.g.

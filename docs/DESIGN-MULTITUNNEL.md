@@ -1,8 +1,8 @@
 # Multi-tunnel architecture (design)
 
 > Status: **implemented (M8–M12)**, 2026-07-04. The dev stack exercises two
-> simultaneous tunnels, a real gw-a → gw-dc relay chain, and failover to the
-> gw-a2 instance (both dead-DNS and silent-instance cases). Fleet subnet
+> simultaneous tunnels, a real wdgw-a → relay-dc relay chain, and failover to the
+> wdgw-a2 instance (both dead-DNS and silent-instance cases). Fleet subnet
 > disjointness is admin-validated; `/api/plan/` supports ETag/304.
 
 ## Goals
@@ -78,8 +78,10 @@ Unchanged: `Network`, `Device` (one per user × gateway), PSK handling, tokens.
    is a privilege: `grp-gw-centre` grants `dc-access`). Collect, at every
    visited gateway, its attached networks ∩ granted networks.
 4. **Deterministic partition**: a network reachable through several tunnels is
-   assigned to exactly **one** — the first in plan order (site-local entry
-   first, then service name). No AllowedIPs overlap ever reaches the client;
+   assigned to exactly **one** — the first in plan order (non-default-route
+   services first, then service name; the user's site only orders *instances*
+   within a service, not the partition). No AllowedIPs overlap ever reaches
+   the client;
    "first come, first served" remains only as the client-side guard during
    failover races. The `default_route` service contributes `0.0.0.0/0` and is
    always last in bring-up order.
@@ -116,7 +118,7 @@ computed return routes on every hop of a chain.
 ## Failover (decided: at connect time)
 
 `connect` brings tunnels up in plan order; for each tunnel, try instances in
-order — no WireGuard handshake within N seconds (~10 s) → tear down, next
+order — no WireGuard handshake within 12 s (`HANDSHAKE_TIMEOUT`) → tear down, next
 instance. A `reconnect` command re-runs the sequence. No resident daemon in
 this iteration; continuous monitoring is a possible later step.
 
